@@ -8,7 +8,7 @@ import Process from './components/Process.jsx';
 import Contact from './components/Contact.jsx';
 import Footer from './components/Footer.jsx';
 import About from './components/About.jsx';
-import OurWorks from './components/Ourworks.jsx';
+import Ourworks from './components/Ourworks.jsx';
 import Whychooseus from './components/Whychooseus.jsx';
 import FrequentlyAskedQuestions from './components/Frequentlyaskedquestions.jsx';
 import ProductPricing from './components/Productpricing.jsx';
@@ -35,7 +35,7 @@ export default function App() {
       <FabricsBand />
       <ProductPricing/>
       {/* <Process /> */}
-      <OurWorks/>
+      <Ourworks/>
       <Whychooseus/>
       <FrequentlyAskedQuestions/>
       <Reviews/>

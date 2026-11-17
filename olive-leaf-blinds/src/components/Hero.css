@@ -1,0 +1,386 @@
+/* Lenis smooth-scroll base rules */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Scroll-driven image sequence hero */
+.seq {
+  --olive: #738839;
+  --olive-dark: #44541f;
+  --gold: #e8b230;
+  --ink: #2a2005;
+  position: relative;
+  z-index: 1;               /* always below the Collection panel (z-index 2) */
+  isolation: isolate;
+  width: 100%;
+  background: #14170b;
+  color: #fff;
+}
+
+.seq-sticky {
+  position: absolute;      /* pinned by JS (see Hero.jsx readScroll) */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+.seq-sticky.is-fixed { position: fixed; }
+.seq-sticky.is-end { top: auto; bottom: 0; }
+
+.seq-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Darkens the left side + bottom so text stays readable on any frame */
+.seq-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(14, 18, 6, 0.72) 0%, rgba(14, 18, 6, 0.35) 45%, rgba(14, 18, 6, 0) 75%),
+    linear-gradient(0deg, rgba(14, 18, 6, 0.55) 0%, rgba(14, 18, 6, 0) 30%),
+    linear-gradient(180deg, rgba(14, 18, 6, 0.5) 0%, rgba(14, 18, 6, 0) 22%);
+}
+
+/* ---------- Nav ---------- */
+.seq-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px clamp(20px, 5vw, 64px);
+}
+.seq-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color:var(--olive);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.seq-brand span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.seq-brand small {
+  font-size: 0.62rem;
+  letter-spacing: 0.34em;
+  color: white;
+  font-weight: 600;
+}
+.seq-links {
+  display: flex;
+  gap: 34px;
+}
+.seq-links a {
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  font-size: 0.95rem;
+  position: relative;
+  padding: 4px 0;
+}
+.seq-links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--olive);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+.seq-links a:hover::after {
+  transform: scaleX(1);
+}
+
+/* ---------- Buttons ---------- */
+.seq-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 26px;
+  border-radius: 999px;
+ background-color: #3f53080c;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+.seq-btn.gold {
+  background: var(--olive);
+  color: var(--ink);
+  background-color: var(--olive);
+  box-shadow: 0 8px 24px rgba(139, 209, 8, 0.062);
+}
+.seq-btn.gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.377);
+
+}
+.seq-btn.ghost {
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.836);
+  backdrop-filter: blur(6px);
+}
+.seq-btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.253);
+}
+
+/* ---------- Copy / chapters ---------- */
+.seq-copy {
+  position: absolute;
+  z-index: 4;
+  left: clamp(20px, 5vw, 64px);
+  right: clamp(20px, 5vw, 64px);
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 640px;
+  pointer-events: none;
+}
+.seq-chapter {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-46%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), visibility 0s 0.6s;
+}
+.seq-chapter.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  transition-delay: 0.08s, 0.08s, 0s;
+}
+.seq-eyebrow {
+  display: inline-block;
+  font-size: 1rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color:rgb(235, 236, 234);
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+.seq-title {
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  line-height: 1.04;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.35);
+}
+.seq-title em {
+  font-style: italic;
+  color: var(--olive);
+}
+.seq-sub {
+  font-size: clamp(1rem, 1.4vw, 1.18rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.88);
+  max-width: 520px;
+  margin: 0 0 28px;
+}
+.seq-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.seq-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+.seq-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.seq-chips i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background:var(--olive);
+}
+
+/* ---------- Scroll hint + progress ---------- */
+/* .seq-hint {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.seq-hint.show {
+  opacity: 1;
+}
+.seq-hint i {
+  width: 1.5px;
+  height: 44px;
+  background: linear-gradient(var(--gold), transparent);
+  animation: seq-drip 1.8s ease-in-out infinite;
+  transform-origin: top;
+}
+@keyframes seq-drip {
+  0% { transform: scaleY(0); opacity: 1; }
+  60% { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+
+.seq-progress {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+}
+.seq-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--olive), var(--gold));
+  transform: scaleX(0);
+  transform-origin: left;
+} */
+
+/* ---------- Loader ---------- */
+.seq-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #14170b;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.8);
+  transition: opacity 0.7s ease, visibility 0s 0.7s;
+}
+.seq-loader.done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.seq-loader-track {
+  width: 180px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+.seq-loader-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--olive), var(--gold));
+  transition: width 0.2s ease;
+}
+
+.seq-loader-error {
+  max-width: 420px;
+  margin: 0;
+  padding: 0 20px;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: #ffb4a8;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+  .seq-links {
+    display: none;
+  }
+  .seq-nav .seq-btn {
+    padding: 11px 18px;
+    font-size: 0.85rem;
+  }
+  .seq-shade {
+    background:
+      linear-gradient(0deg, rgba(14, 18, 6, 0.85) 0%, rgba(14, 18, 6, 0.45) 55%, rgba(14, 18, 6, 0.2) 100%);
+  }
+  .seq-copy {
+    top: auto;
+    bottom: 90px;
+    transform: none;
+    height: 360px;
+  }
+  .seq-chapter {
+    top: auto;
+    bottom: 0;
+    transform: translateY(14px);
+  }
+  .seq-chapter.is-active {
+    transform: none;
+  }
+}
+
+/* small phones: the scroll hint would overlap the feature chips */
+@media (max-width: 560px) {
+  .seq-hint { display: none; }
+  .seq-brand { font-size: 1rem; }
+}
+
+/* short screens (phones in landscape) */
+@media (max-height: 520px) {
+  .seq-nav { padding-top: 12px; padding-bottom: 12px; }
+  .seq-brand img { width: 34px; height: 34px; }
+  .seq-copy { top: auto; bottom: 26px; transform: none; height: 230px; max-width: 520px; }
+  .seq-chapter { top: auto; bottom: 0; transform: translateY(14px); }
+  .seq-chapter.is-active { transform: none; }
+  .seq-eyebrow { margin-bottom: 8px; font-size: .68rem; }
+  .seq-title { font-size: clamp(1.7rem, 9vh, 2.6rem); margin-bottom: 10px; }
+  .seq-sub { font-size: .85rem; line-height: 1.45; margin-bottom: 14px; }
+  .seq-cta { margin-bottom: 0; }
+  .seq-btn { padding: 10px 18px; font-size: .85rem; }
+  .seq-chips, .seq-hint { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seq-chapter,
+  .seq-loader,
+  .seq-hint i {
+    transition: none;
+    animation: none;
+  }
+}

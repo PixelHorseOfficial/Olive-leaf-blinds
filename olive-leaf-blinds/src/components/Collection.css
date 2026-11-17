@@ -1,0 +1,259 @@
+/* ==========================================================
+   Collection — pinned horizontal-scroll section
+   All classes are prefixed .col- so nothing clashes with the
+   rest of the site. Tweak the colours in the variables below.
+   ========================================================== */
+.col {
+  --col-bg: #eff7d9;          /* section background (cream)        */
+  --col-ink: #1D2410;         /* headings / text                   */
+  --col-muted: #5E6648;       /* paragraph text                    */
+  --col-accent: #5B6E2A;      /* eyebrow, square arrow button      */
+  --col-bar: #DCD6AE;         /* hover "View products" bar         */
+  --col-card-w: clamp(250px, 22vw, 360px);
+  --col-gap: 24px;
+  --col-ease: cubic-bezier(.22, .8, .24, 1);
+
+  position: relative;
+  z-index: 2;                 /* above the pinned hero */
+  color: var(--col-ink);
+}
+
+/* The section itself is just an invisible scroll runway (height set by JS).
+   The stage is fixed to the screen while you scroll through it. */
+.col { pointer-events: none; }
+.col-stage {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  background: var(--col-bg);
+  pointer-events: auto;
+  transform: translate3d(100%, 0, 0);   /* hidden off-screen until JS drives it */
+  visibility: hidden;
+  will-change: transform;
+}
+/* after the last card: let go, so the next section scrolls up normally */
+.col-stage.is-after { position: absolute; top: var(--col-after, 0); }
+
+.col-track {
+  display: flex;
+  align-items: center;
+  gap: var(--col-gap);
+  padding: 0 clamp(20px, 2vw, 40px);
+  will-change: transform;
+}
+
+/* ---------- intro column ---------- */
+.col-intro {
+  flex: 0 0 clamp(230px, 18vw, 300px);
+  margin-right: clamp(8px, 1.5vw, 28px);
+  align-self: center;
+}
+.col-eyebrow {
+  display: block;
+  font-size: 1rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--col-accent);
+  margin-bottom: 14px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .7s var(--col-ease), transform .7s var(--col-ease);
+}
+.col-title {
+  margin: 0 0 26px;
+  font-weight: 500;
+  font-size: clamp(2.4rem, 3.6vw, 3.6rem);
+  line-height: .93;
+  letter-spacing: -.045em;
+  text-transform: uppercase;
+}
+.col-line { display: block; overflow: hidden; padding-bottom: .04em; }
+.col-line > span {
+  display: block;
+  transform: translateY(110%);
+  transition: transform .95s var(--col-ease);
+}
+.col-line:nth-child(2) > span { transition-delay: .08s; }
+.col-line:nth-child(3) > span { transition-delay: .16s; }
+.col-line:nth-child(4) > span { transition-delay: .24s; }
+
+.col-lead {
+  margin: 0;
+  max-width: 26ch;
+  font-size: .95rem;
+  line-height: 1.55;
+  color: #3c4b18;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .8s var(--col-ease) .35s, transform .8s var(--col-ease) .35s;
+}
+
+/* ---------- card ---------- */
+.col-card {
+  flex: 0 0 var(--col-card-w);
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  opacity: 0;
+  transform: translateX(60px);
+  transition: opacity .8s var(--col-ease) var(--d, 0s), transform .9s var(--col-ease) var(--d, 0s);
+}
+
+.col-img {
+  position: relative;
+  aspect-ratio: 8 / 9;
+  overflow: hidden;
+  background: #E6E1C6;
+}
+.col-img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  transition: opacity .6s var(--col-ease), transform 1.1s var(--col-ease);
+}
+.col-img-b { opacity: 0; transform: scale(1.06); }
+.col-card:hover .col-img-a,
+.col-card:focus-visible .col-img-a { opacity: 0; transform: scale(1.04); }
+.col-card:hover .col-img-b,
+.col-card:focus-visible .col-img-b { opacity: 1; transform: scale(1); }
+
+/* info row: square button + name  ->  full beige bar on hover */
+.col-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  margin-top: 16px;
+  padding-right: 12px;
+  background: transparent;
+  transition: background-color .45s var(--col-ease);
+}
+.col-btn {
+  flex: 0 0 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--col-accent);
+  color: #fff;
+  transition: background-color .45s var(--col-ease), color .45s var(--col-ease);
+}
+.col-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-transform: uppercase;
+  transition: opacity .3s ease, transform .45s var(--col-ease);
+}
+.col-name strong { font-weight: 500; font-size: .92rem; letter-spacing: .01em; line-height: 1.15; }
+.col-name small  { font-size: .74rem; letter-spacing: .02em; color: var(--col-muted); line-height: 1.1; }
+
+.col-view {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translate(-12px, -50%);
+  transition: opacity .35s ease, transform .5s var(--col-ease);
+  pointer-events: none;
+}
+
+.col-card:hover .col-row,
+.col-card:focus-visible .col-row { background: var(--col-bar); }
+.col-card:hover .col-btn,
+.col-card:focus-visible .col-btn { background: transparent; color: var(--col-ink); }
+.col-card:hover .col-name,
+.col-card:focus-visible .col-name { opacity: 0; transform: translateX(10px); }
+.col-card:hover .col-view,
+.col-card:focus-visible .col-view { opacity: 1; transform: translate(0, -50%); transition-delay: .08s; }
+
+.col-card:focus-visible { outline: 2px solid var(--col-accent); outline-offset: 6px; }
+
+.col-note {
+  margin: 20px 0 0;
+  font-size: .86rem;
+  color: var(--col-muted);
+}
+
+.col-end { flex: 0 0 clamp(16px, 4vw, 80px); }
+
+/* ---------- progress line ---------- */
+.col-progress {
+  position: absolute;
+  left: clamp(20px, 2vw, 40px);
+  right: clamp(20px, 2vw, 40px);
+  bottom: 12vh;
+  height: 2px;
+  background: rgba(29, 36, 16, .12);
+}
+.col-progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--col-ink);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* ---------- reveal state ---------- */
+.col.is-in .col-eyebrow,
+.col.is-in .col-lead { opacity: 1; transform: none; }
+.col.is-in .col-line > span { transform: none; }
+.col.is-in .col-card { opacity: 1; transform: none; }
+
+/* ---------- responsive ---------- */
+.col-stage { height: 100vh; height: 100dvh; }
+
+/* tablets & phones: same pinned scroll-driven animation, just smaller pieces */
+@media (max-width: 899px) {
+  .col { --col-card-w: clamp(230px, 40vw, 330px); --col-gap: 18px; }
+  .col-track { padding: 0 20px; }
+  .col-intro { flex-basis: clamp(210px, 34vw, 280px); }
+  .col-title { font-size: clamp(2.3rem, 7.4vw, 3.2rem); margin-bottom: 20px; }
+  .col-progress { left: 20px; right: 20px; bottom: 9vh; }
+}
+@media (max-width: 560px) {
+  .col { --col-card-w: min(74vw, 320px); --col-gap: 14px; }
+  .col-intro { flex-basis: min(72vw, 280px); }
+  .col-title { font-size: clamp(2.3rem, 11vw, 3rem); }
+  .col-lead { font-size: .9rem; }
+  .col-note { font-size: .82rem; margin-top: 14px; }
+  .col-row { margin-top: 12px; }
+}
+
+/* short screens (phones in landscape, small laptops): size cards by height */
+@media (max-height: 640px) {
+  .col { --col-card-w: clamp(130px, calc((100dvh - 200px) / 1.125), 300px); }
+  .col-title { font-size: clamp(1.8rem, 6.5vh, 3rem); margin-bottom: 14px; }
+  .col-lead { font-size: .82rem; }
+  .col-note { margin-top: 10px; }
+  .col-progress { bottom: 6vh; }
+}
+
+/* very wide screens: don't let cards grow forever */
+@media (min-width: 1800px) {
+  .col { --col-card-w: 380px; }
+}
+
+/* touch devices have no hover: the card nearest the centre shows its 2nd picture,
+   and the "View products" bar stays hidden */
+@media (hover: none) {
+  .col-view { display: none; }
+  .col-card.is-active .col-img-a { opacity: 0; transform: scale(1.04); }
+  .col-card.is-active .col-img-b { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .col *, .col *::before, .col *::after { transition-duration: .01ms !important; transition-delay: 0s !important; }
+}

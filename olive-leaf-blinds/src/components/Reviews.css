@@ -1,0 +1,234 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+
+.rv-section {
+  --rv-bg: #eff7d9;
+  --rv-ink: #141414;
+  --rv-muted: #8a8a8a;
+  --rv-text: #4a4a4a;
+  --rv-line: #ececec;
+  --rv-star: #c9c02c;
+  --rv-gap: 24px;
+  --rv-speed: 45s;
+
+  background: var(--rv-bg);
+  padding: 96px 0;
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  color: var(--rv-ink);
+  overflow: hidden;
+}
+
+/* ---------- Header ---------- */
+
+.rv-header {
+  max-width: 760px;
+  margin: 0 auto 64px;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.rv-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #5B6E2A;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fffafa;
+}
+
+.rv-heading {
+  margin: 22px 0 0;
+  font-size: clamp(2rem, 4.4vw, 3.3rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.rv-heading span {
+  color: var(--rv-muted);
+}
+
+.rv-sub {
+  margin: 22px auto 0;
+  max-width: 480px;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #5B6E2A;
+}
+
+/* ---------- Rows ---------- */
+
+.rv-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rv-gap);
+  cursor: pointer;
+}
+
+.rv-marquee {
+  overflow: hidden;
+  /* soft fade at both edges */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  padding: 8px 0 28px;
+}
+
+.rv-track {
+  display: flex;
+  width: max-content;
+  animation: rv-scroll var(--rv-speed) linear infinite;
+  will-change: transform;
+}
+
+.rv-track.is-reverse {
+  animation-direction: reverse;
+}
+
+.rv-set {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rv-gap);
+  padding-right: var(--rv-gap); /* keeps the loop seamless */
+}
+
+@keyframes rv-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Pause on hover, on keyboard focus, or when clicked (locked) */
+.rv-rows:hover .rv-track,
+.rv-rows:focus-within .rv-track,
+.rv-rows.is-locked .rv-track {
+  animation-play-state: paused;
+}
+
+/* ---------- Card ---------- */
+
+.rv-card {
+  flex: 0 0 auto;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 26px 28px;
+  background: #fff;
+  border: 1px solid var(--rv-line);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(20, 20, 20, 0.04);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* gentle stagger like the reference */
+.rv-set .rv-card:nth-child(even) {
+  margin-top: 26px;
+}
+
+.rv-rows:hover .rv-card:hover,
+.rv-rows.is-locked .rv-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 34px rgba(20, 20, 20, 0.09);
+}
+
+.rv-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.rv-star {
+  fill: #dcdcd6;
+}
+
+.rv-star.is-on {
+  fill: #5B6E2A;
+}
+
+.rv-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color:#5B6E2A;
+}
+
+.rv-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.rv-avatar {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #5B6E2A;
+  color: #f3f5ef;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.rv-author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rv-name {
+  font-size: 0.98rem;
+  font-weight: 500;
+}
+
+.rv-role {
+  font-size: 0.82rem;
+  color: var(--rv-muted);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 768px) {
+  .rv-section {
+    padding: 64px 0;
+    --rv-speed: 38s;
+  }
+
+  .rv-header {
+    margin-bottom: 40px;
+  }
+
+  .rv-card {
+    width: 290px;
+    padding: 22px;
+  }
+
+  .rv-set .rv-card:nth-child(even) {
+    margin-top: 18px;
+  }
+}
+
+/* Visitors who prefer reduced motion get a manual swipe/scroll row instead */
+@media (prefers-reduced-motion: reduce) {
+  .rv-track {
+    animation: none;
+  }
+
+  .rv-marquee {
+    overflow-x: auto;
+  }
+
+  .rv-set[aria-hidden="true"] {
+    display: none;
+  }
+}

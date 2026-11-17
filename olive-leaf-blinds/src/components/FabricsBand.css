@@ -1,0 +1,192 @@
+/* ==========================================================
+   Fabrics band — five zoom-on-hover cards
+   Classes are prefixed .fb- so nothing clashes with the site CSS.
+   Change colours / zoom speed in the variables below.
+   ========================================================== */
+.fb {
+  --fb-bg: #eff7d9;
+  --fb-ink: #1F2412;
+  --fb-muted: #6A6F58;
+  --fb-accent: #5B6E2A;
+  --fb-zoom-time: 1.25s;                         /* speed of the zoom in / out */
+  --fb-ease: cubic-bezier(.19, .7, .22, 1);
+
+  background: var(--fb-bg);
+  color: var(--fb-ink);
+  padding: clamp(56px, 7vw, 110px) 0 clamp(64px, 8vw, 120px);
+  position: relative;
+}
+.fb-wrap {
+  width: min(1620px, 100% - clamp(32px, 8vw, 150px));
+  margin: 0 auto;
+}
+
+/* ---------- header ---------- */
+.fb-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 40px;
+  margin-bottom: clamp(36px, 4.5vw, 64px);
+}
+.fb-eyebrow {
+  display: block;
+  font-size: 1rem;
+  color: #5B6E2A;
+  margin-bottom: 14px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .7s var(--fb-ease), transform .7s var(--fb-ease);
+}
+.fb-title {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(2.3rem, 3.3vw, 3.7rem);
+  line-height: .98;
+  letter-spacing: -.05em;
+}
+.fb-title em { font-style: italic; color: var(--fb-accent); letter-spacing: -.04em; }
+.fb-line { display: block; overflow: hidden; padding-bottom: .08em; }
+.fb-line > span {
+  display: block;
+  transform: translateY(110%);
+  transition: transform 1s var(--fb-ease);
+}
+.fb-line:nth-child(2) > span { transition-delay: .1s; }
+
+.fb-side {
+  max-width: 440px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .9s var(--fb-ease) .25s, transform .9s var(--fb-ease) .25s;
+}
+.fb-side p { margin: 0 0 14px; font-size: 1.3rem; line-height: 1.55; color: #738839; }
+.fb-samples {
+  display: inline-flex; gap: 8px; align-items: center;
+  font-size: .9rem; font-weight: 500; color: var(--fb-ink);
+  text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 2px;
+  transition: color .3s, gap .3s var(--fb-ease);
+}
+.fb-samples:hover { color: var(--fb-accent); gap: 12px; }
+
+/* ---------- grid ---------- */
+.fb-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.fb-card {
+  min-width: 0;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity .9s var(--fb-ease), transform 1.1s var(--fb-ease);
+  transition-delay: calc(.2s + var(--i) * .09s);
+}
+
+/* ---------- image: zoomed-in at rest, zooms OUT on hover ---------- */
+.fb-media {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: #E3E1D2;
+  color: inherit;
+  text-decoration: none;
+  clip-path: inset(100% 0 0 0);                  /* entrance: wipes up */
+  transition: clip-path 1.15s var(--fb-ease);
+  transition-delay: calc(.2s + var(--i) * .09s);
+}
+.fb-in {                                          /* entrance: settles from a bigger zoom */
+  position: absolute; inset: 0;
+  transform: scale(1.25);
+  transition: transform 1.6s var(--fb-ease);
+  transition-delay: calc(.2s + var(--i) * .09s);
+}
+.fb-in img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  transform: scale(var(--z, 2.1));               /* ZOOM IN  (resting state) */
+  transform-origin: var(--o, 50% 60%);
+  transition: transform var(--fb-zoom-time) var(--fb-ease);
+  will-change: transform;
+}
+.fb-card:hover .fb-in img,
+.fb-card:focus-within .fb-in img,
+.fb-card.is-open .fb-in img { transform: scale(1); }   /* ZOOM OUT (hover) */
+
+/* white label bar */
+.fb-label {
+  position: absolute;
+  left: 12px; right: 12px; bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 14px;
+  background: #738839 ;
+  color: var(--fb-ink);
+  font-size: .8rem;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .4s ease, transform .6s var(--fb-ease);
+}
+.fb-label::after {                                 /* thin line that sweeps across */
+  content: '';
+  position: absolute; left: 0; bottom: 0;
+  width: 100%; height: 2px;
+  background: var(--fb-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .7s var(--fb-ease);
+}
+.fb-label span:last-child { transition: transform .4s var(--fb-ease); }
+.fb-card:hover .fb-label,
+.fb-card:focus-within .fb-label,
+.fb-card.is-open .fb-label { opacity: 1; transform: none; transition-delay: .12s; }
+.fb-card:hover .fb-label::after,
+.fb-card:focus-within .fb-label::after,
+.fb-card.is-open .fb-label::after { transform: scaleX(1); transition-delay: .25s; }
+.fb-card:hover .fb-label span:last-child { transform: translateX(4px); }
+
+.fb-media:focus-visible { outline: 2px solid var(--fb-accent); outline-offset: 4px; }
+
+/* ---------- text ---------- */
+.fb-name {
+  margin: 18px 0 8px;
+  font-weight: 400;
+  font-size: clamp(1.15rem, 1.25vw, 1.4rem);
+  letter-spacing: -.02em;
+  line-height: 1.15;
+  display: flex; align-items: baseline; gap: 8px;
+}
+.fb-name small { font-size: .72rem; letter-spacing: 0; color: var(--fb-muted); }
+.fb-desc {
+  margin: 0;
+  max-width: 30ch;
+  font-size: .86rem;
+  line-height: 1.5;
+  color: #5B6E2A;
+}
+
+/* ---------- reveal state ---------- */
+.fb.is-in .fb-eyebrow,
+.fb.is-in .fb-side,
+.fb.is-in .fb-card { opacity: 1; transform: none; }
+.fb.is-in .fb-line > span { transform: none; }
+.fb.is-in .fb-media { clip-path: inset(0 0 0 0); }
+.fb.is-in .fb-in { transform: scale(1); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  .fb-grid { grid-template-columns: repeat(3, 1fr); row-gap: 36px; }
+}
+@media (max-width: 760px) {
+  .fb-head { flex-direction: column; align-items: flex-start; gap: 22px; }
+  .fb-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; row-gap: 32px; }
+  .fb-card:last-child { grid-column: 1 / -1; }
+  .fb-card:last-child .fb-media { aspect-ratio: 4 / 3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb *, .fb *::before, .fb *::after { transition-duration: .01ms !important; transition-delay: 0s !important; }
+}

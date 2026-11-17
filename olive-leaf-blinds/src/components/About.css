@@ -1,0 +1,197 @@
+/* ==========================================================
+   About section — image + intro + count-up stats
+   Classes are prefixed .ab- so nothing clashes with the site CSS.
+   ========================================================== */
+.ab {
+  --ab-bg: #eff7d9;
+  --ab-ink: #151A0B;
+  --ab-text: #3F4430;
+  --ab-muted: #8A8E78;
+  --ab-line: rgba(21, 26, 11, .14);
+  --ab-ease: cubic-bezier(.19, .7, .22, 1);
+
+  background: var(--ab-bg);
+  color: var(--ab-ink);
+  padding: clamp(64px, 8vw, 130px) 0 clamp(64px, 8vw, 120px);
+  position: relative;
+  overflow: hidden;
+}
+.ab-wrap {
+  width: min(1440px, 100% - clamp(40px, 12vw, 230px));
+  margin: 0 auto;
+}
+
+/* ---------- top: image + copy ---------- */
+.ab-top {
+  display: grid;
+  grid-template-columns: minmax(0, 533fr) minmax(0, 770fr);
+  gap: clamp(40px, 6.5vw, 100px);
+  align-items: center;
+}
+
+.ab-photo {
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  border-radius: clamp(20px, 2vw, 30px);
+  overflow: hidden;
+  background: #D9D6C5;
+  /* entrance: card pops up — starts small, low and faded, then springs to full size */
+  opacity: 0;
+  transform: scale(.7) translateY(60px);
+  transform-origin: center bottom;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    opacity .7s ease,
+    transform 1.1s cubic-bezier(.34, 1.56, .64, 1),   /* slight overshoot = pop effect */
+    scale .5s cubic-bezier(.34, 1.56, .64, 1),        /* hover / press */
+    translate .5s cubic-bezier(.34, 1.56, .64, 1),
+    box-shadow .5s ease;
+  box-shadow: 0 30px 60px -25px rgba(21, 26, 11, .35);
+}
+.ab-photo-in {
+  width: 100%; height: 100%;
+  transform: scale(1.3);                                /* entrance: settles from a big zoom */
+  transition: transform 2s var(--ab-ease);
+}
+.ab-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  transform: translate3d(0, var(--py, 0px), 0) scale(1.1);   /* room for the parallax */
+  transition: filter .6s ease;
+}
+.ab-photo:hover .ab-photo-in { transform: scale(1.04); transition-duration: 1.6s; }
+
+/* mouse over: card lifts and grows a little */
+.ab.is-in .ab-photo:hover {
+  scale: 1.04;
+  translate: 0 -10px;
+  box-shadow: 0 45px 80px -30px rgba(21, 26, 11, .5);
+}
+/* mouse down: card presses in */
+.ab.is-in .ab-photo:active {
+  scale: .96;
+  translate: 0 2px;
+  box-shadow: 0 15px 30px -15px rgba(21, 26, 11, .4);
+  transition-duration: .15s;
+}
+/* click: quick squash-and-bounce with a soft ring (class added in About.jsx) */
+.ab-photo.is-clicked { animation: ab-click-pop .7s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes ab-click-pop {
+  0%   { scale: 1;    box-shadow: 0 0 0 0 rgba(142, 154, 91, .55); }
+  30%  { scale: .94; }
+  65%  { scale: 1.06; box-shadow: 0 0 0 26px rgba(142, 154, 91, 0); }
+  100% { scale: 1;    box-shadow: 0 0 0 0 rgba(142, 154, 91, 0); }
+}
+
+.ab-copy { max-width: 780px; }
+.ab-badge {
+  display: inline-block;
+  padding: 9px 20px;
+  border-radius: 999px;
+  background:#738839 ;
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 500;
+  letter-spacing: -.01em;
+  opacity: 0;
+  transform: scale(.8) translateY(8px);
+  transform-origin: left center;
+  transition: opacity .6s var(--ab-ease) .25s, transform .8s var(--ab-ease) .25s;
+}
+.ab-title {
+  margin: 16px 0 14px;
+  font-weight: 500;
+  font-size: clamp(2.2rem, 3.6vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -.04em;
+}
+.ab-line { display: block; overflow: hidden; padding-bottom: .12em; }
+.ab-line > span {
+  display: block;
+  transform: translateY(115%);
+  transition: transform 1.05s var(--ab-ease) .35s;
+}
+.ab-text {
+  margin: 0;
+  font-size: clamp(1rem, 1.25vw, 1.2rem);
+  line-height: 1.6;
+  color: var(--ab-text);
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .9s var(--ab-ease) .55s, transform .9s var(--ab-ease) .55s;
+}
+
+/* ---------- stats ---------- */
+.ab-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: clamp(48px, 6vw, 90px);
+}
+.ab-stat {
+  position: relative;
+  padding: 0 clamp(8px, 1.4vw, 20px);
+  opacity: 0;
+  transform: translateY(34px);
+  transition: opacity .9s var(--ab-ease), transform 1s var(--ab-ease);
+  transition-delay: calc(.45s + var(--i) * .16s);
+}
+.ab-stat::before {                                       /* thin line that draws across the top */
+  content: '';
+  position: absolute; left: clamp(8px, 1.4vw, 20px); right: 12%; top: -22px;
+  height: 1px;
+  background: var(--ab-line);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 1.2s var(--ab-ease);
+  transition-delay: calc(.5s + var(--i) * .16s);
+}
+.ab-num {
+  font-size: clamp(3.2rem, 5vw, 5.4rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: clamp(18px, 2vw, 30px);
+}
+.ab-stat h3 {
+  margin: 0 0 8px;
+  font-size: clamp(1.05rem, 1.35vw, 1.3rem);
+  font-weight: 400;
+  letter-spacing: -.01em;
+}
+.ab-stat p {
+  margin: 0;
+  font-size: clamp(.9rem, 1.1vw, 1.05rem);
+  font-weight: 600;
+  color: #738839;
+}
+
+/* ---------- reveal state ---------- */
+.ab.is-in .ab-photo { opacity: 1; transform: none; }
+.ab.is-in .ab-photo-in { transform: scale(1); }
+.ab.is-in .ab-badge { opacity: 1; transform: none; }
+.ab.is-in .ab-line > span { transform: none; }
+.ab.is-in .ab-text { opacity: 1; transform: none; }
+.ab.is-in .ab-stat { opacity: 1; transform: none; }
+.ab.is-in .ab-stat::before { transform: scaleX(1); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .ab-top { grid-template-columns: 1fr; gap: 32px; }
+  .ab-stats { grid-template-columns: repeat(2, 1fr); row-gap: 48px; }
+  .ab-stat { padding-left: 0; }
+  .ab-stat::before { left: 0; }
+}
+@media (max-width: 480px) {
+  .ab-wrap { width: calc(100% - 40px); }
+  .ab-stats { column-gap: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ab *, .ab *::before, .ab *::after { transition-duration: .01ms !important; transition-delay: 0s !important; }
+  .ab-photo-in, .ab-photo img { transform: none !important; }
+  .ab-photo, .ab-photo.is-clicked { animation: none !important; scale: none !important; translate: none !important; }
+}

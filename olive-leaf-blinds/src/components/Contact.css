@@ -1,0 +1,238 @@
+.olb-contact {
+  --olb-olive: #44541f;
+  --olb-olive-soft: #a9b87a;
+  --olb-cream: #f7f8f1;
+  --olb-gold: #e8b230;
+  --olb-gold-dark: #a8740a;
+  --olb-ink: #2b3314;
+
+  background: #eff7d9;
+  padding: 64px 24px;
+  color: var(--olb-ink);
+}
+
+.olb-contact__wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: clamp(32px, 6vw, 88px);
+}
+
+/* ---------- image ---------- */
+.olb-contact__media {
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--olb-cream);
+  box-shadow: 0 24px 50px -28px rgba(68, 84, 31, 0.45);
+}
+
+.olb-contact__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.9s ease;
+}
+
+.olb-contact__media:hover img {
+  transform: scale(1.04);
+}
+
+/* ---------- right panel ---------- */
+.olb-contact__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.olb-contact__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 56px;
+}
+
+.olb-contact__leaf {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  transform-origin: 50% 100%;
+  animation: olb-sway 5s ease-in-out infinite;
+}
+
+.olb-contact__name {
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--olb-olive);
+}
+
+.olb-contact__name em {
+  font-style: normal;
+  color: var(--olb-olive);
+}
+
+.olb-contact__tagline {
+  margin: 0 0 14px;
+  font-size: 17px;
+  color: #3d4528;
+}
+
+/* ---------- form ---------- */
+.olb-contact__form {
+  display: flex;
+  width: 100%;
+  border: 1px solid #dfe3d0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.olb-contact__form:focus-within {
+  border-color: var(--olb-olive);
+  box-shadow: 0 0 0 4px rgba(169, 184, 122, 0.35);
+}
+
+.olb-contact__form input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 16px 20px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--olb-ink);
+}
+
+.olb-contact__form input::placeholder {
+  color: #7b8268;
+}
+
+.olb-contact__form input[aria-invalid='true'] {
+  color: #a32a12;
+}
+
+.olb-contact__form button {
+  border: 0;
+  cursor: pointer;
+  padding: 0 30px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  color: white;
+  background: #5B6E2A;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.olb-contact__form button:hover {
+  background: #000000d5;
+}
+
+.olb-contact__form button:active {
+  transform: scale(0.97);
+}
+
+.olb-contact__msg {
+  min-height: 22px;
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+
+.olb-contact__msg.error {
+  color: #a32a12;
+}
+
+.olb-contact__msg.sent {
+  color: var(--olb-olive);
+  font-weight: 600;
+}
+
+/* ---------- follow us ---------- */
+.olb-contact__follow {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.olb-contact__follow ul {
+  display: flex;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.olb-contact__follow a {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--olb-ink);
+  transition: color 0.2s, transform 0.2s;
+}
+
+.olb-contact__follow a:hover {
+  color:  #5B6E2A;
+  transform: translateY(-3px);
+}
+
+.olb-contact__follow svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- misc ---------- */
+.olb-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes olb-sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50%      { transform: rotate(5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .olb-contact__leaf { animation: none; }
+  .olb-contact__media img { transition: none; }
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 860px) {
+  .olb-contact { padding: 40px 16px; }
+
+  .olb-contact__wrap {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .olb-contact__media { aspect-ratio: 4 / 3; }
+  .olb-contact__brand { margin-bottom: 36px; }
+}
+
+@media (max-width: 420px) {
+  .olb-contact__form button { padding: 0 20px; }
+}

@@ -13,6 +13,7 @@ html.lenis body {
 /* Scroll-driven image sequence hero */
 .seq {
   --olive: #738839;
+  --olive-light: #c4dc7a;
   --olive-dark: #44541f;
   --gold: #e8b230;
   --ink: #2a2005;
@@ -30,7 +31,7 @@ html.lenis body {
   left: 0;
   width: 100%;
   height: 100vh;
-  height: 100dvh;
+  height: 100svh;          /* stable on phones: ignores the collapsing address bar */
   overflow: hidden;
 }
 .seq-sticky.is-fixed { position: fixed; }
@@ -72,11 +73,12 @@ html.lenis body {
   display: flex;
   align-items: center;
   gap: 12px;
-  color:var(--olive);
+  color: #fff;
   text-decoration: none;
   font-weight: 700;
   font-size: 1.15rem;
   line-height: 1;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
 }
 .seq-brand span {
   display: flex;
@@ -86,7 +88,7 @@ html.lenis body {
 .seq-brand small {
   font-size: 0.62rem;
   letter-spacing: 0.34em;
-  color: white;
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
 }
 .seq-links {
@@ -123,7 +125,7 @@ html.lenis body {
   gap: 10px;
   padding: 14px 26px;
   border-radius: 999px;
- background-color: #3f53080c;
+  background-color: #3f53080c;
   font-weight: 600;
   font-size: 0.95rem;
   text-decoration: none;
@@ -139,7 +141,6 @@ html.lenis body {
 .seq-btn.gold:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.377);
-
 }
 .seq-btn.ghost {
   color: #fff;
@@ -183,7 +184,7 @@ html.lenis body {
   font-size: 1rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color:rgb(235, 236, 234);
+  color: rgb(235, 236, 234);
   font-weight: 600;
   margin-bottom: 18px;
 }
@@ -228,58 +229,14 @@ html.lenis body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background:var(--olive);
+  background: var(--olive);
 }
 
-/* ---------- Scroll hint + progress ---------- */
-/* .seq-hint {
-  position: absolute;
-  z-index: 4;
-  left: 50%;
-  bottom: 34px;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.7rem;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.8);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-.seq-hint.show {
-  opacity: 1;
-}
-.seq-hint i {
-  width: 1.5px;
-  height: 44px;
-  background: linear-gradient(var(--gold), transparent);
-  animation: seq-drip 1.8s ease-in-out infinite;
-  transform-origin: top;
-}
-@keyframes seq-drip {
-  0% { transform: scaleY(0); opacity: 1; }
-  60% { transform: scaleY(1); opacity: 1; }
-  100% { transform: scaleY(1); opacity: 0; }
-}
-
+/* ---------- Scroll hint + progress (currently disabled) ---------- */
+.seq-hint,
 .seq-progress {
-  position: absolute;
-  z-index: 5;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.15);
+  display: none;
 }
-.seq-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--olive), var(--gold));
-  transform: scaleX(0);
-  transform-origin: left;
-} */
 
 /* ---------- Loader ---------- */
 .seq-loader {
@@ -326,46 +283,199 @@ html.lenis body {
   color: #ffb4a8;
 }
 
+/* ---------- Nav right side + mobile menu (hidden on desktop) ---------- */
+.seq-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.seq-burger,
+.seq-menu {
+  display: none;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
-  .seq-links {
-    display: none;
+  .seq-links { display: none; }
+
+  /* Logo text always white on mobile */
+  .seq-brand,
+  .seq-brand span,
+  .seq-brand small {
+    color: #fff !important;
   }
+
+  /* Hamburger button */
+  .seq-burger {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.7);
+    background: rgba(20, 23, 11, 0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seq-burger span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: #fff;
+    transition: transform 0.3s ease, opacity 0.2s ease;
+  }
+  .seq-burger.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .seq-burger.is-open span:nth-child(2) { opacity: 0; }
+  .seq-burger.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* Dropdown panel */
+  .seq-menu {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: calc(100% - 4px);
+    left: 16px;
+    right: 16px;
+    padding: 8px 20px 20px;
+    border-radius: 18px;
+    background: rgba(20, 23, 11, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0s 0.25s;
+  }
+  .seq-menu.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+  .seq-menu a:not(.seq-btn) {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 500;
+    padding: 15px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .seq-menu a:not(.seq-btn):active { color: var(--olive-light); }
+  .seq-nav .seq-menu .seq-menu-cta {
+    display: none;            /* shown on small phones only (see below) */
+    justify-content: center;
+    margin-top: 16px;
+    padding: 14px 18px;
+    font-size: 0.95rem;
+    color: #fff;
+  }
+
+  .seq-nav { padding: 16px 20px; gap: 12px; }
   .seq-nav .seq-btn {
-    padding: 11px 18px;
-    font-size: 0.85rem;
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    background: var(--olive);
   }
+
+  /* Brand readable on any frame */
+  .seq-brand { font-size: 1rem; }
+  .seq-brand img { width: 40px; height: 40px; }
+
+  /* Strong dark gradient behind the text area + soft top for the nav */
   .seq-shade {
     background:
-      linear-gradient(0deg, rgba(14, 18, 6, 0.85) 0%, rgba(14, 18, 6, 0.45) 55%, rgba(14, 18, 6, 0.2) 100%);
+      linear-gradient(0deg, rgba(14, 18, 6, 0.92) 0%, rgba(14, 18, 6, 0.8) 38%, rgba(14, 18, 6, 0.35) 68%, rgba(14, 18, 6, 0) 85%),
+      linear-gradient(180deg, rgba(14, 18, 6, 0.6) 0%, rgba(14, 18, 6, 0) 20%);
   }
+
+  /* Text block anchored to the bottom, sized to its content */
   .seq-copy {
     top: auto;
-    bottom: 90px;
+    bottom: 28px;
+    left: 20px;
+    right: 20px;
     transform: none;
-    height: 360px;
+    height: auto;
+    min-height: 330px;
+    max-width: none;
   }
   .seq-chapter {
     top: auto;
     bottom: 0;
     transform: translateY(14px);
   }
-  .seq-chapter.is-active {
-    transform: none;
+  .seq-chapter.is-active { transform: none; }
+
+  .seq-eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    margin-bottom: 12px;
+    color: #f1f1ea;
   }
+  .seq-title {
+    font-size: clamp(2rem, 9.5vw, 2.8rem);
+    line-height: 1.08;
+    margin-bottom: 14px;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7);
+  }
+  .seq-title em { color: var(--olive-light); }   /* lighter olive: visible on dark */
+  .seq-sub {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #fff;
+    margin-bottom: 20px;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Buttons side by side instead of stacked */
+  .seq-cta { gap: 10px; margin-bottom: 16px; flex-wrap: nowrap; }
+  .seq-cta .seq-btn {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 13px 12px;
+    font-size: 0.82rem;
+    gap: 6px;
+    white-space: normal;
+    text-align: center;
+  }
+  .seq-cta .seq-btn svg { width: 15px; height: 15px; flex: none; }
+  .seq-btn.gold { color: #fff; }
+
+  /* Chips: compact */
+  .seq-chips { gap: 6px 14px; font-size: 0.74rem; }
 }
 
-/* small phones: the scroll hint would overlap the feature chips */
+/* small phones: the consultation button moves into the menu */
 @media (max-width: 560px) {
-  .seq-hint { display: none; }
-  .seq-brand { font-size: 1rem; }
+  .seq-nav-cta { display: none; }
+  .seq-nav .seq-menu .seq-menu-cta { display: inline-flex; }
+  .seq-copy { bottom: 22px; min-height: 310px; }
+  .seq-chips span:nth-child(2) { display: none; }  /* keep it to 2 chips */
+}
+
+/* very narrow phones: stack the buttons again */
+@media (max-width: 380px) {
+  .seq-cta { flex-wrap: wrap; }
+  .seq-cta .seq-btn { flex: 1 1 100%; }
+  .seq-chips { display: none; }
 }
 
 /* short screens (phones in landscape) */
 @media (max-height: 520px) {
   .seq-nav { padding-top: 12px; padding-bottom: 12px; }
   .seq-brand img { width: 34px; height: 34px; }
-  .seq-copy { top: auto; bottom: 26px; transform: none; height: 230px; max-width: 520px; }
+  .seq-copy { top: auto; bottom: 20px; min-height: 0; transform: none; max-width: 520px; }
   .seq-chapter { top: auto; bottom: 0; transform: translateY(14px); }
   .seq-chapter.is-active { transform: none; }
   .seq-eyebrow { margin-bottom: 8px; font-size: .68rem; }
@@ -373,13 +483,12 @@ html.lenis body {
   .seq-sub { font-size: .85rem; line-height: 1.45; margin-bottom: 14px; }
   .seq-cta { margin-bottom: 0; }
   .seq-btn { padding: 10px 18px; font-size: .85rem; }
-  .seq-chips, .seq-hint { display: none; }
+  .seq-chips { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .seq-chapter,
-  .seq-loader,
-  .seq-hint i {
+  .seq-loader {
     transition: none;
     animation: none;
   }

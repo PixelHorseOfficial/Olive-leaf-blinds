@@ -23,6 +23,14 @@ let frameExt = FRAME_EXT;
 const frameSrc = (i) =>
   encodeURI(`${FRAME_DIR}/image${String(i).padStart(2, '0')}.${frameExt}`);
 
+/* Nav links (used by the desktop bar AND the mobile menu) */
+const NAV_LINKS = [
+  { href: '#collection', label: 'Collection' },
+  { href: '#craft', label: 'Craft' },
+  { href: '#process', label: 'Process' },
+  { href: '#reach', label: 'Coverage' },
+];
+
 /* Text chapters shown over the sequence, by scroll progress (0–1) */
 const CHAPTERS = [
   {
@@ -90,6 +98,27 @@ export default function Hero() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [chapter, setChapter] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  /* ----- mobile menu: close on Escape, on scroll, and when the screen gets wide ----- */
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const close = () => setMenuOpen(false);
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    const onResize = () => {
+      if (window.innerWidth > 860) close();
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', close, { passive: true });
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', close);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -374,22 +403,62 @@ export default function Hero() {
         <div className="seq-shade" aria-hidden="true" />
 
         {/* Nav */}
-        <nav className="seq-nav" aria-label="Main">
+        <nav className={`seq-nav ${menuOpen ? 'menu-open' : ''}`} aria-label="Main">
           <a className="seq-brand" href="#home" aria-label="Olive Leaf Blinds home">
             <img src="/images/logo2.png" width="46" height="46" alt="Olive Leaf Blinds logo" />
             <span>
               Olive Leaf<small>BLINDS</small>
             </span>
           </a>
+
+          {/* Desktop links */}
           <div className="seq-links">
-            <a href="#collection">Collection</a>
-            <a href="#craft">Craft</a>
-            <a href="#process">Process</a>
-            <a href="#reach">Coverage</a>
+            {NAV_LINKS.map((l) => (
+              <a key={l.href} href={l.href}>
+                {l.label}
+              </a>
+            ))}
           </div>
-          <a className="seq-btn gold" href="#contact">
-            Free home consultation
-          </a>
+
+          <div className="seq-nav-right">
+            <a className="seq-btn gold seq-nav-cta" href="#contact">
+              Free home consultation
+            </a>
+
+            {/* Mobile hamburger (shown ≤ 860px) */}
+            <button
+              type="button"
+              className={`seq-burger ${menuOpen ? 'is-open' : ''}`}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              aria-controls="seq-mobile-menu"
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+          </div>
+
+          {/* Mobile dropdown menu */}
+          <div
+            id="seq-mobile-menu"
+            className={`seq-menu ${menuOpen ? 'is-open' : ''}`}
+            aria-hidden={!menuOpen}
+          >
+            {NAV_LINKS.map((l) => (
+              <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)}>
+                {l.label}
+              </a>
+            ))}
+            <a
+              className="seq-btn gold seq-menu-cta"
+              href="#contact"
+              onClick={() => setMenuOpen(false)}
+            >
+              Free home consultation
+            </a>
+          </div>
         </nav>
 
         {/* Frames */}

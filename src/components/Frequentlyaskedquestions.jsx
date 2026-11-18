@@ -55,10 +55,12 @@ const FrequentlyAskedQuestions = () => {
     <section className="faq-section" aria-labelledby="faq-heading">
       <div className="faq-container">
         <div className="faq-heading-wrap">
+          {/* {" "} keeps a real space before each <br />, so the words
+              never merge into "FrequentlyAskedQuestions" when the <br /> is hidden */}
           <h2 id="faq-heading" className="faq-heading">
-            Frequently
+            Frequently{" "}
             <br />
-            Asked
+            Asked{" "}
             <br />
             Questions
           </h2>

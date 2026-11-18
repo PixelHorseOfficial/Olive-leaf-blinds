@@ -1,4 +1,4 @@
-import "./WhyChooseUs.css";
+import "./WhychooseUs.css";
 
 /* ------------------------------------------------------------------
    IMAGE — put your file in:  public/images/

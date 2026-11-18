@@ -8,9 +8,9 @@ const FRAME_DIR = '/images/olive leaf seq';
 const FRAME_EXT = 'png'; // jpg | png | webp  (files are named image00.ext … image88.ext)
 const FIRST_FRAME = 0; // number in the first file name (image00)
 const LAST_FRAME = 88; // number in the last file name (image88)
-const SCROLL_LENGTH_VH = 800; // total scroll distance for the sequence (bigger = slower playback)
-const SMOOTHING = 0.14; // frame easing per 60fps tick (0–1, higher = snappier, lower = floatier)
-const SCROLL_LERP = 0.09; // Lenis smoothness (lower = floatier)
+const SCROLL_LENGTH_VH = 700; // total scroll distance: ~5-6 scrolls (bigger = more scrolls)
+const SMOOTHING = 0.22; // frame easing per 60fps tick (0–1, higher = snappier, lower = floatier)
+const SCROLL_LERP = 0.12; // Lenis smoothness (lower = floatier)
 const WHEEL_SPEED = 1; // how far one wheel notch scrolls (higher = faster)
 const START_IDX = FIRST_FRAME; // index of the first frame played
 const END_IDX = LAST_FRAME; // index of the last frame played
@@ -93,7 +93,9 @@ export default function Hero() {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false }); // opaque canvas = faster
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high'; // sharper downscaling of the frames
     let cancelled = false;
     let raf = 0;
 
@@ -168,19 +170,27 @@ export default function Hero() {
       const w = iw * scale;
       const h = ih * scale;
       ctx.globalAlpha = alpha;
-      ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
+      ctx.drawImage(img, Math.round((cw - w) / 2), Math.round((ch - h) / 2), Math.round(w), Math.round(h));
       ctx.globalAlpha = 1;
       return true;
     };
 
     // pos is a float: the next frame is cross-faded in by the fractional part,
     // so playback never "steps" between frames.
-    const draw = (pos) => {
+    // While moving, neighbouring frames are cross-faded for fluid playback.
+    // Once the motion settles (scroll stopped / nearly stopped) we draw ONE crisp
+    // frame instead — blending two frames at rest is what made the image look blurry.
+    const draw = (pos, settled = false) => {
       const p = Math.min(END_IDX, Math.max(START_IDX, pos));
+      if (settled) {
+        paintFrame(Math.round(p), 1);
+        lastDrawn = pos;
+        return;
+      }
       const a = Math.floor(p);
       const f = p - a;
       if (!paintFrame(a, 1)) return;
-      if (f > 0.02 && a < END_IDX) paintFrame(a + 1, f);
+      if (f > 0.04 && a < END_IDX) paintFrame(a + 1, f);
       lastDrawn = pos;
     };
 
@@ -235,6 +245,7 @@ export default function Hero() {
 
     /* ----- animation loop ----- */
     let lastTime = 0;
+    let wasSettled = false;
     const tick = (time) => {
       if (cancelled) return;
       lenis.raf(time);
@@ -246,8 +257,12 @@ export default function Hero() {
         // frame-rate independent easing toward the target frame
         current += (target - current) * (1 - Math.pow(1 - SMOOTHING, dt / 16.7));
       }
-      if (Math.abs(target - current) < 0.005) current = target;
-      if (current !== lastDrawn) draw(current);
+      const gap = Math.abs(target - current);
+      if (gap < 0.005) current = target;
+      // settled = almost no motion left -> snap to a single sharp frame
+      const settled = gap < 0.35;
+      if (current !== lastDrawn || (settled && !wasSettled)) draw(current, settled);
+      wasSettled = settled;
       raf = requestAnimationFrame(tick);
     };
 
@@ -331,7 +346,6 @@ export default function Hero() {
     raf = requestAnimationFrame(tick);
 
     lenis.on('scroll', readScroll);
-    window.addEventListener('scroll', readScroll, { passive: true });
     const onResize = () => {
       resize();
       readScroll();
@@ -344,7 +358,6 @@ export default function Hero() {
       document.removeEventListener('click', onAnchorClick);
       armEvents.forEach((ev) => window.removeEventListener(ev, arm));
       lenis.destroy();
-      window.removeEventListener('scroll', readScroll);
       window.removeEventListener('resize', onResize);
     };
   }, []);

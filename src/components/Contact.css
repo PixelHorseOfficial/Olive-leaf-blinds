@@ -164,35 +164,36 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  font-size: 15px;
+  gap: 10px;
+  font-size: 45px;
 }
 
 .olb-contact__follow ul {
   display: flex;
-  gap: 22px;
+  gap: 26px;
   margin: 0;
   padding: 0;
   list-style: none;
+ 
 }
 
 .olb-contact__follow a {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 48px;
+  height: 48px;
   color: var(--olb-ink);
   transition: color 0.2s, transform 0.2s;
 }
 
 .olb-contact__follow a:hover {
-  color:  #5B6E2A;
   transform: translateY(-3px);
 }
 
+
 .olb-contact__follow svg {
-  width: 22px;
-  height: 22px;
+  width: 38px;
+  height: 38px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.6;

@@ -18,13 +18,11 @@ const SOCIALS = [
     ),
   },
   {
-    name: 'Pinterest',
-    href: 'https://pinterest.com',
+    name: 'Facebook',
+    href: 'https://facebook.com',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M10.200 20 12 12.500" />
-        <path d="M9.500 14c-1.300-2.600.300-5.500 3-5.500 2 0 3 1.300 3 2.800 0 2-1.200 3.500-2.800 3.500-.8 0-1.300-.500-1.500-1" />
+        <path d="M14 8h2.500V4.500H14A3.500 3.500 0 0 0 10.500 8v2.500H8V14h2.500v6.500H14V14h2.500l.5-3.500H14V8z" />
       </svg>
     ),
   },
@@ -111,7 +109,7 @@ export default function Contact() {
             <ul>
               {SOCIALS.map((s) => (
                 <li key={s.name}>
-                  <a href={s.href} target="_blank" rel="noreferrer" aria-label={s.name}>
+                  <a className={`olb-social-${s.name.toLowerCase()}`} href={s.href} target="_blank" rel="noreferrer" aria-label={s.name}>
                     {s.icon}
                   </a>
                 </li>

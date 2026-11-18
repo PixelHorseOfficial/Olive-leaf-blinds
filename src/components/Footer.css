@@ -20,7 +20,7 @@
   color: var(--bf-text);
   overflow: hidden;
   box-sizing: border-box;
-  height:100vh;
+ 
 }
 
 .bf *,
@@ -203,15 +203,86 @@
 /* divider line + bottom row */
 .bf .bf-bottom {
   display: flex;
+  align-items: center;           /* logo + text share the same centre line */
   justify-content: space-between;
-  gap: 12px;
+  gap: 12px 24px;
   flex-wrap: wrap;
-  margin-right: 24px;
-  padding: 28px 0 26px;
+  padding: 24px 0;
   border-top: 1px solid rgba(13, 13, 13, 0.3);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1rem;               /* regular credit text */
+  font-weight: 500;
   color: var(--bf-text);
+}
+
+/* logo sits at the far left, aligned with the "Explore" column */
+.bf .bf-logo {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.bf .bf-logo img {
+  display: block;
+  height: clamp(44px, 4vw, 64px);
+  width: auto;
+}
+
+/* logo + social icons grouped on the left */
+.bf .bf-brandrow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.bf .bf-social {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bf .bf-social a {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #fff;                   /* white icon on a brand-coloured circle */
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.bf .bf-social a:hover,
+.bf .bf-social a:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.28);
+}
+
+/* official brand colours */
+.bf .bf-social .bf-social-instagram {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%);
+}
+.bf .bf-social .bf-social-linkedin {
+  background: #0a66c2;
+}
+.bf .bf-social .bf-social-facebook {
+  background: #1877f2;
+}
+
+.bf .bf-credit {
+  text-align: right;
+  line-height: 1;
+  white-space: nowrap;           /* stays on one line, never drops */
+}
+
+/* "Pixel Horse" is larger so it stands out from the rest of the line */
+.bf .bf-credit-name {
+  font-size: 1.6em;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  vertical-align: baseline;      /* sits on the same line as the rest of the text */
 }
 
 /* ---------- Blinds photo strip ---------- */
@@ -238,10 +309,46 @@
     padding-bottom: 32px;
   }
 
+  /* tidy, centred stack: [logo + socials] -> credit line -> rights line */
   .bf .bf-bottom {
     flex-direction: column;
-    gap: 4px;
-    padding: 20px 0;
+    align-items: center;
+    gap: 18px;
+    padding: 28px 0 32px;
+    text-align: center;
+  }
+
+  .bf .bf-brandrow {
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .bf .bf-credit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .bf .bf-credit-by {
+    display: block;
+    font-size: 0.9rem;
+  }
+
+  /* "Pixel Horse" goes on its own line so it stands out */
+  .bf .bf-credit-name {
+    display: block;
+    margin-top: 6px;
+    font-size: 1.1rem;
+    line-height: 1.1;
+  }
+
+  .bf .bf-rights {
+    font-size: 0.85rem;
+    opacity: 0.8;
   }
 }
 

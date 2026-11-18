@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Olive Leaf Blinds – homepage (React + Vite)
 
     npm install
@@ -11,3 +12,6 @@ Structure
 
 Brand colours: olive (--o1 … --o9), gold (--g, --g2, --g3).
 Placeholders to replace: footer phone number and email in Footer.jsx.
+=======
+# Olive-leaf-blinds
+>>>>>>> origin/main

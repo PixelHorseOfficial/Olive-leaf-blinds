@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import "./OurWorks.css";
+import "./Ourworks.css";
 
 /* ------------------------------------------------------------------
    IMAGES — put your files in:  public/images/

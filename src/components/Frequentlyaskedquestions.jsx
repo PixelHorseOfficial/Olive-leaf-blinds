@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./FrequentlyAskedQuestions.css";
+import "./Frequentlyaskedquestions.css";
 
 const FAQ_ITEMS = [
   {

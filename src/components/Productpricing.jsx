@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import "./ProductPricing.css";
+import "./Productpricing.css";
 
 /*
   Images are hotlinked from Unsplash (free to use).

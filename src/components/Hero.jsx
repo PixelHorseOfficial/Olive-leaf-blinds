@@ -128,6 +128,12 @@ export default function Hero() {
     let progress = 0;
     let lastChapter = -1;
     let loadedCount = 0;
+    let attempts = 0; // frames finished loading OR failing (missing files count too)
+    // The playable range. Starts as the configured range, then shrinks to the first / last
+    // frame file that actually exists once every file has been tried. So removing frames
+    // from the folder never leaves the hero on an empty first frame.
+    let lo = START_IDX;
+    let hi = END_IDX;
     let armed = false;
 
     const arm = () => {
@@ -248,7 +254,7 @@ export default function Hero() {
 
     const ensureBackdrop = () => {
       if (backdropOK) return true;
-      const bi = nearestLoaded(Math.round((START_IDX + END_IDX) / 2));
+      const bi = nearestLoaded(Math.round((lo + hi) / 2));
       if (bi < 0) return false;
       const img = imagesRef.current[bi];
       const iw = img.naturalWidth;
@@ -332,7 +338,7 @@ export default function Hero() {
     // frame instead — blending two frames at rest is what made the image look blurry.
     let shown = -1; // portrait: the frame index currently on screen
     const draw = (pos, settled = false) => {
-      const p = Math.min(END_IDX, Math.max(START_IDX, pos));
+      const p = Math.min(hi, Math.max(lo, pos));
       if (isPortrait()) {
         // PHONE: never blend two frames (blending the soft edges of two different frames
         // is what looked like "shattering"). Show ONE whole frame; only switch once the
@@ -355,7 +361,7 @@ export default function Hero() {
       const a = Math.floor(p);
       const f = p - a;
       if (!paintFrame(a, 1)) return;
-      if (f > 0.04 && a < END_IDX) paintFrame(a + 1, f);
+      if (f > 0.04 && a < hi) paintFrame(a + 1, f);
       lastDrawn = pos;
     };
 
@@ -365,11 +371,11 @@ export default function Hero() {
     const rebuildCache = () => {
       clearTimeout(rebuildTimer);
       if (!isPortrait()) return;
-      let i = START_IDX;
+      let i = lo;
       const step = () => {
         if (cancelled) return;
-        for (let n = 0; n < 3 && i <= END_IDX; n++, i++) prefill(i);
-        if (i <= END_IDX) rebuildTimer = setTimeout(step, 16);
+        for (let n = 0; n < 3 && i <= hi; n++, i++) prefill(i);
+        if (i <= hi) rebuildTimer = setTimeout(step, 16);
       };
       step();
     };
@@ -434,7 +440,7 @@ export default function Hero() {
       // Stay on frame 1 until the visitor actually scrolls (wheel / touch / keys / scrollbar)
       if (!armed && unlocked && window.scrollY > 2) armed = true;
       progress = armed ? Math.min(1, Math.max(0, p)) : 0;
-      target = START_IDX + progress * (END_IDX - START_IDX);
+      target = lo + progress * (hi - lo); // the whole sequence always spans the full scroll
 
       if (debugRef.current) {
         debugRef.current.textContent =
@@ -487,25 +493,49 @@ export default function Hero() {
       // reset to the very top, then unlock scrolling
       window.scrollTo(0, 0);
       lenis.scrollTo(0, { immediate: true, force: true });
-      target = START_IDX;
-      current = START_IDX;
+      target = lo;
+      current = lo;
       lastDrawn = -1;
-      draw(START_IDX);
+      draw(lo);
       measure();
       readScroll();
       lenis.start();
     };
+    // Called after EVERY attempt (loaded or missing). When all files have been tried,
+    // fit the playable range to the files that exist, then unlock scrolling.
+    const settle = () => {
+      attempts++;
+      setLoadedPct(Math.round((attempts / TOTAL) * 100));
+      if (attempts < TOTAL) return;
+      let a = -1;
+      let b = -1;
+      for (let k = START_IDX; k <= END_IDX; k++) {
+        if (loadedRef.current[k]) {
+          if (a < 0) a = k;
+          b = k;
+        }
+      }
+      if (a >= 0) {
+        lo = a;
+        hi = b;
+      }
+      shown = -1;
+      lastDrawn = -1;
+      if (unlocked) {
+        measure();
+        readScroll();
+      } else if (a >= 0) {
+        unlockNow();
+      }
+    };
     const onFrameLoaded = (i) => {
       loadedRef.current[i] = true;
       loadedCount++;
-      if (i === START_IDX) draw(START_IDX);
       shown = -1; // repaint if the frame that just arrived is the one on screen
       lastDrawn = -1;
-      setLoadedPct(Math.round((loadedCount / TOTAL) * 100));
-      // phones wait for every frame, so scrolling never lands on a frame that isn't ready
-      // (that fallback to a far-away frame looked like jumping / shattering)
-      const needed = coarse || window.innerWidth <= 860 ? TOTAL : 6;
-      if (loadedCount === TOTAL || loadedCount >= needed) unlockNow();
+      // desktop starts after a handful of frames; phones wait until every file was tried
+      if (!(coarse || window.innerWidth <= 860) && loadedCount >= 6) unlockNow();
+      settle();
     };
 
     const order = [START_IDX];
@@ -540,6 +570,7 @@ export default function Hero() {
       };
       img.onerror = () => {
         console.warn('Missing frame:', frameSrc(i));
+        settle();
         loadNext();
       };
       img.src = frameSrc(i);
@@ -547,26 +578,31 @@ export default function Hero() {
     };
     // Find the correct file extension by probing the first frame, then start the queue.
     const exts = [...new Set([frameExt, 'jpg', 'jpeg', 'png', 'webp'])];
+    // probe a few different frame numbers: the first file may have been removed
+    const cands = [...new Set([START_IDX, END_IDX, Math.round((START_IDX + END_IDX) / 2), START_IDX + 1, END_IDX - 1])];
+    const combos = [];
+    exts.forEach((e) => cands.forEach((c) => combos.push([e, c])));
     const probe = (n) => {
       if (cancelled) return;
-      if (n >= exts.length) {
+      if (n >= combos.length) {
         lenis.start(); // never leave the page scroll-locked if the frames are missing
         setError(
-          `Could not find ${FRAME_DIR}/image${String(START_IDX).padStart(2, '0')}.(jpg|jpeg|png|webp). ` +
-            'Check that the folder is public/images/olive leaf seq and the files are named image00, image01 …'
+          `Could not find any frames in ${FRAME_DIR}/ (image${String(START_IDX).padStart(2, '0')} … image${String(END_IDX).padStart(2, '0')}, jpg|jpeg|png|webp). ` +
+            'Check the folder is public/images/olive leaf seq and the files are named image00, image01 …'
         );
         return;
       }
+      const [ext, idx] = combos[n];
       const test = new Image();
       test.onload = () => {
         if (cancelled) return;
-        frameExt = exts[n];
+        frameExt = ext;
         for (let k = 0; k < CONCURRENCY; k++) loadNext();
       };
       test.onerror = () => probe(n + 1);
       const prevExt = frameExt;
-      frameExt = exts[n];
-      test.src = frameSrc(START_IDX);
+      frameExt = ext;
+      test.src = frameSrc(idx);
       frameExt = prevExt;
     };
     probe(0);

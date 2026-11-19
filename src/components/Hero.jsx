@@ -3,11 +3,11 @@ import Lenis from 'lenis';
 import './Hero.css';
 
 /* ---------- Config: change these if your files differ ---------- */
-const FRAME_COUNT = 89; // image00.png … image88.png = 89 files
+const FRAME_COUNT = 68; // image00.png … image67.png = 68 files
 const FRAME_DIR = '/images/olive leaf seq';
-const FRAME_EXT = 'png'; // jpg | png | webp  (files are named image00.ext … image88.ext)
+const FRAME_EXT = 'png'; // jpg | png | webp  (files are named image00.ext … image67.ext)
 const FIRST_FRAME = 0; // number in the first file name (image00)
-const LAST_FRAME = 88; // number in the last file name (image88)
+const LAST_FRAME = 68; // number in the last file name (image67)
 const STEPS = 5; // hero is 5 screens tall: the frames play continuously over the first 4, the 5th leaves it
 const SMOOTHING = 0.2; // frame easing per 60fps tick (0–1, higher = snappier, lower = floatier)
 const SCROLL_LERP = 0.1; // Lenis smoothness for the rest of the page
@@ -21,7 +21,7 @@ const TOTAL = END_IDX - START_IDX + 1; // number of frames actually used
 // The real extension is auto-detected at load time (tries FRAME_EXT first,
 // then jpg / jpeg / png / webp), so a wrong FRAME_EXT no longer breaks loading.
 let frameExt = FRAME_EXT;
-// index i -> /images/olive leaf seq/image00.png, image01.png, … image88.png
+// index i -> /images/olive leaf seq/image00.png, image01.png, … image67.png
 const frameSrc = (i) =>
   encodeURI(`${FRAME_DIR}/image${String(i).padStart(2, '0')}.${frameExt}`);
 
@@ -134,6 +134,12 @@ export default function Hero() {
     // from the folder never leaves the hero on an empty first frame.
     let lo = START_IDX;
     let hi = END_IDX;
+    // Once every file has been tried, `slots` lists the frame files that really exist, in
+    // order. Playback then runs over those slots, so a gap in the file numbers (removed
+    // frames) never causes a pause or a hold: the neighbours of every position are always
+    // two real, existing frames.
+    let slots = null;
+    const frameAt = (s) => (slots ? slots[Math.max(0, Math.min(slots.length - 1, s))] : s);
     let armed = false;
 
     const arm = () => {
@@ -221,9 +227,10 @@ export default function Hero() {
       return { w, h, x, y };
     };
 
-    const feathered = (i, img, w, h) => {
+    // Each frame is cached once at its exact on-screen size (no edge fade baked in).
+    const plain = (i, img, w, h) => {
       let c = frameCache[i];
-      // exact size only: the cached frame is blitted 1:1, never rescaled while scrolling
+      // exact size only: cached frames are blitted 1:1, never rescaled while scrolling
       if (c && c.width === w && c.height === h) return c;
       if (!c) c = frameCache[i] = document.createElement('canvas');
       c.width = w;
@@ -231,8 +238,22 @@ export default function Hero() {
       const cx = c.getContext('2d');
       cx.imageSmoothingQuality = 'high';
       cx.drawImage(img, 0, 0, w, h);
-      cx.globalCompositeOperation = 'destination-in';
-      const g = cx.createLinearGradient(0, 0, 0, h);
+      return c;
+    };
+
+    // The soft top/bottom edge is ONE shared mask, applied AFTER two frames are blended.
+    // (Fading two separately-feathered frames over each other is what made the edges and
+    // curtains look like they were shattering.)
+    let mask = null;
+    let blend = null;
+    let bctx2 = null;
+    const ensureMask = (w, h) => {
+      if (mask && mask.width === w && mask.height === h) return;
+      mask = document.createElement('canvas');
+      mask.width = w;
+      mask.height = h;
+      const mx = mask.getContext('2d');
+      const g = mx.createLinearGradient(0, 0, 0, h);
       g.addColorStop(0, 'rgba(0,0,0,0)');
       g.addColorStop(0.08, 'rgba(0,0,0,0.35)');
       g.addColorStop(0.2, 'rgba(0,0,0,1)');
@@ -240,21 +261,24 @@ export default function Hero() {
       g.addColorStop(0.72, 'rgba(0,0,0,0.6)');
       g.addColorStop(0.86, 'rgba(0,0,0,0.2)');
       g.addColorStop(1, 'rgba(0,0,0,0)');
-      cx.fillStyle = g;
-      cx.fillRect(0, 0, w, h);
-      return c;
+      mx.fillStyle = g;
+      mx.fillRect(0, 0, w, h);
+      blend = document.createElement('canvas');
+      blend.width = w;
+      blend.height = h;
+      bctx2 = blend.getContext('2d');
     };
 
     const prefill = (i) => {
       const img = imagesRef.current[i];
       if (!img || !img.naturalWidth || !isPortrait()) return;
       const { w, h } = portraitBox(img);
-      feathered(i, img, w, h);
+      plain(i, img, w, h);
     };
 
     const ensureBackdrop = () => {
       if (backdropOK) return true;
-      const bi = nearestLoaded(Math.round((lo + hi) / 2));
+      const bi = nearestLoaded(frameAt(Math.round((lo + hi) / 2)));
       if (bi < 0) return false;
       const img = imagesRef.current[bi];
       const iw = img.naturalWidth;
@@ -297,6 +321,43 @@ export default function Hero() {
       return true;
     };
 
+    // PHONE: blend frame A with frame B (fraction f) off-screen, apply the edge mask once,
+    // then draw backdrop + result. Everything is 1:1 and opaque, one atomic update per tick.
+    const paintPortrait = (ia, ib, f) => {
+      const ua = nearestLoaded(ia);
+      if (ua < 0) return false;
+      const imgA = imagesRef.current[ua];
+      if (!imgA.naturalWidth) return false;
+      const { w, h, x, y } = portraitBox(imgA);
+      ensureMask(w, h);
+      bctx2.globalCompositeOperation = 'source-over';
+      bctx2.globalAlpha = 1;
+      bctx2.clearRect(0, 0, w, h);
+      bctx2.drawImage(plain(ua, imgA, w, h), 0, 0);
+      if (f > 0 && ib != null) {
+        const ub = nearestLoaded(ib);
+        const imgB = ub >= 0 ? imagesRef.current[ub] : null;
+        if (imgB && ub !== ua && imgB.naturalWidth) {
+          bctx2.globalAlpha = f;
+          bctx2.drawImage(plain(ub, imgB, w, h), 0, 0);
+          bctx2.globalAlpha = 1;
+        }
+      }
+      bctx2.globalCompositeOperation = 'destination-in';
+      bctx2.drawImage(mask, 0, 0);
+      bctx2.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      if (ensureBackdrop()) {
+        ctx.drawImage(backdrop, 0, 0);
+      } else {
+        ctx.fillStyle = '#14170b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(blend, x, y);
+      return true;
+    };
+
+    // DESKTOP (unchanged behaviour)
     const paintFrame = (i, alpha) => {
       const useIdx = nearestLoaded(i);
       if (useIdx < 0) return false;
@@ -306,20 +367,6 @@ export default function Hero() {
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
       if (!iw || !ih) return false;
-
-      if (isPortrait()) {
-        const { w, h, x, y } = portraitBox(img);
-        ctx.globalAlpha = 1;
-        if (ensureBackdrop()) {
-          ctx.drawImage(backdrop, 0, 0);
-        } else {
-          ctx.fillStyle = '#14170b';
-          ctx.fillRect(0, 0, cw, ch);
-        }
-        ctx.drawImage(feathered(useIdx, img, w, h), x, y); // 1:1, no scaling
-        return true;
-      }
-
       const scale = Math.max(cw / iw, ch / ih);
       const w = iw * scale;
       const h = ih * scale;
@@ -336,32 +383,31 @@ export default function Hero() {
     // While moving, neighbouring frames are cross-faded for fluid playback.
     // Once the motion settles (scroll stopped / nearly stopped) we draw ONE crisp
     // frame instead — blending two frames at rest is what made the image look blurry.
-    let shown = -1; // portrait: the frame index currently on screen
+    let shown = -1; // portrait: key of what is on screen, so identical frames aren't repainted
     const draw = (pos, settled = false) => {
       const p = Math.min(hi, Math.max(lo, pos));
+      const a = Math.floor(p);
+      let f = a >= hi ? 0 : p - a;
       if (isPortrait()) {
-        // PHONE: never blend two frames (blending the soft edges of two different frames
-        // is what looked like "shattering"). Show ONE whole frame; only switch once the
-        // position is clearly past the half-way point, so touch-scroll jitter can't make
-        // it flip back and forth between two frames.
-        let idx = Math.round(p);
-        if (shown >= 0 && Math.abs(p - shown) < 0.65) idx = shown;
-        if (idx !== shown) {
-          paintFrame(idx, 1);
-          shown = idx;
+        // PHONE: always cross-fade the two neighbouring real frames by the fractional
+        // position (no snapping between blended and sharp, so nothing pops). When the
+        // scroll stops, tick() eases the position onto a whole frame, so it rests sharp.
+        if (f < 0.01) f = 0;
+        const key = a + ':' + Math.round(f * 50);
+        if (key !== shown) {
+          if (!paintPortrait(frameAt(a), f > 0 ? frameAt(a + 1) : null, f)) return;
+          shown = key;
         }
         lastDrawn = pos;
         return;
       }
       if (settled) {
-        paintFrame(Math.round(p), 1);
+        paintFrame(frameAt(Math.round(p)), 1);
         lastDrawn = pos;
         return;
       }
-      const a = Math.floor(p);
-      const f = p - a;
-      if (!paintFrame(a, 1)) return;
-      if (f > 0.04 && a < hi) paintFrame(a + 1, f);
+      if (!paintFrame(frameAt(a), 1)) return;
+      if (f > 0.04 && a < hi) paintFrame(frameAt(a + 1), f);
       lastDrawn = pos;
     };
 
@@ -374,7 +420,7 @@ export default function Hero() {
       let i = lo;
       const step = () => {
         if (cancelled) return;
-        for (let n = 0; n < 3 && i <= hi; n++, i++) prefill(i);
+        for (let n = 0; n < 3 && i <= hi; n++, i++) prefill(frameAt(i));
         if (i <= hi) rebuildTimer = setTimeout(step, 16);
       };
       step();
@@ -464,19 +510,28 @@ export default function Hero() {
     /* ----- animation loop ----- */
     let lastTime = 0;
     let wasSettled = false;
+    let prevTarget = -1;
+    let lastMove = 0;
     const tick = (time) => {
       if (cancelled) return;
       lenis.raf(time);
       const dt = lastTime ? Math.min(64, time - lastTime) : 16.7;
       lastTime = time;
+      if (target !== prevTarget) {
+        prevTarget = target;
+        lastMove = time;
+      }
+      // phones: once the scroll has been still for a moment, glide onto the nearest whole
+      // frame, so the image comes to rest on one sharp frame without any sudden pop
+      const goal = !reduceMotion && isPortrait() && time - lastMove > 150 ? Math.round(target) : target;
       if (reduceMotion) {
         current = target;
       } else {
-        // frame-rate independent easing toward the target frame
-        current += (target - current) * (1 - Math.pow(1 - SMOOTHING, dt / 16.7));
+        // frame-rate independent easing toward the goal
+        current += (goal - current) * (1 - Math.pow(1 - SMOOTHING, dt / 16.7));
       }
-      const gap = Math.abs(target - current);
-      if (gap < 0.005) current = target;
+      const gap = Math.abs(goal - current);
+      if (gap < 0.005) current = goal;
       // settled = motion is over -> a single sharp frame. Kept tight so slow, continuous
       // scrolling never flips between blended and single-frame drawing (that read as a stutter)
       const settled = gap < 0.01;
@@ -516,14 +571,19 @@ export default function Hero() {
         }
       }
       if (a >= 0) {
-        lo = a;
-        hi = b;
+        const list = [];
+        for (let k = a; k <= b; k++) if (loadedRef.current[k]) list.push(k);
+        slots = list; // only frames that exist, in order
+        lo = 0;
+        hi = list.length - 1;
       }
       shown = -1;
       lastDrawn = -1;
       if (unlocked) {
         measure();
         readScroll();
+        current = target;
+        rebuildCache();
       } else if (a >= 0) {
         unlockNow();
       }

@@ -26,6 +26,9 @@ html.lenis body {
   /* STEPS screens tall; scrolling plays the frames continuously (svh = stable on phones) */
   height: calc(var(--seq-steps, 5) * 100vh);
   height: calc(var(--seq-steps, 5) * 100svh);
+  /* lvh = the FULL screen height (browser bars collapsed). svh left an empty strip under the
+     hero whenever the phone's address/tool bar was smaller than its "expanded" size. */
+  height: calc(var(--seq-steps, 5) * 100lvh);
 }
 
 .seq-sticky {
@@ -34,7 +37,8 @@ html.lenis body {
   left: 0;
   width: 100%;
   height: 100vh;
-  height: 100svh;          /* stable on phones: ignores the collapsing address bar */
+  height: 100svh;
+  height: 100lvh;          /* full-screen height, constant while the address bar moves: no gap, no resize */
   overflow: hidden;
   transform: translate3d(0, 0, 0);
   will-change: transform;  /* own GPU layer = steady while the address bar moves */
@@ -407,6 +411,8 @@ html.lenis body {
   .seq-copy {
     top: auto;
     bottom: 84px;             /* lifted off the bottom edge; raise/lower to taste */
+    /* the hero is now full-screen tall, so also clear the browser's bottom bar when it is showing */
+    bottom: calc(84px + 100lvh - 100svh);
     left: 20px;
     right: 20px;
     transform: none;
@@ -464,7 +470,7 @@ html.lenis body {
 @media (max-width: 560px) {
   .seq-nav-cta { display: none; }
   .seq-nav .seq-menu .seq-menu-cta { display: inline-flex; }
-  .seq-copy { bottom: 76px; min-height: 310px; }
+  .seq-copy { bottom: 76px; bottom: calc(76px + 100lvh - 100svh); min-height: 310px; }
   .seq-chips span:nth-child(2) { display: none; }  /* keep it to 2 chips */
 }
 

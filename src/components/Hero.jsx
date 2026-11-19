@@ -7,11 +7,17 @@ const FRAME_COUNT = 68; // image00.png … image67.png = 68 files
 const FRAME_DIR = '/images/olive leaf seq';
 const FRAME_EXT = 'png'; // jpg | png | webp  (files are named image00.ext … image67.ext)
 const FIRST_FRAME = 0; // number in the first file name (image00)
-const LAST_FRAME = 68; // number in the last file name (image67)
+const LAST_FRAME = 67; // number in the last file name (image67)
 const STEPS = 5; // hero is 5 screens tall: the frames play continuously over the first 4, the 5th leaves it
 const SMOOTHING = 0.2; // frame easing per 60fps tick (0–1, higher = snappier, lower = floatier)
 const SCROLL_LERP = 0.1; // Lenis smoothness for the rest of the page
-const WHEEL_SPEED = 1;
+const WHEEL_SPEED = 1; // wheel speed while the hero is playing
+/* Scroll feel for everything BELOW the hero (applied automatically once the hero is passed) */
+const PAGE_LERP = 0.07; // mouse-wheel smoothness (lower = silkier / slower to catch up)
+const PAGE_WHEEL = 0.7; // mouse-wheel speed (1 = default; lower = slower, calmer scrolling)
+const PAGE_TOUCH_SMOOTH = true; // phones: smooth, calmer swipe scrolling below the hero (false = pure native)
+const PAGE_TOUCH_LERP = 0.06; // phones: glide smoothness after a swipe (lower = longer, softer glide)
+const PAGE_TOUCH_INERTIA = 1.5; // phones: swipe "throw" strength (default 1.7; lower = shorter throw)
 const MOBILE_ZOOM = 1.1; // portrait screens: 1 = whole frame width visible, >1 = zoom in, <1 = zoom out
 const MOBILE_FOCUS_Y = 0.36; // portrait screens: where the frame's centre sits (0 = top, 1 = bottom)
 const START_IDX = FIRST_FRAME; // index of the first frame played
@@ -190,7 +196,25 @@ export default function Hero() {
        moves the page freely (Lenis only smooths it), so the hero never pauses between
        frames. The scroll position drives the frame directly (see readScroll). */
     let unlocked = false; // false while the frames are still loading
-    const onLenisScroll = () => readScroll();
+    // Hero zone: the tuned hero feel. Page zone (hero finished): calmer, normal-speed scrolling.
+    let zone = '';
+    const tuneLenis = () => {
+      const z = window.scrollY < trackTop + trackH - pinH ? 'hero' : 'page';
+      if (z === zone) return;
+      zone = z;
+      const page = z === 'page';
+      lenis.options.lerp = page ? PAGE_LERP : SCROLL_LERP;
+      if (lenis.virtualScroll && lenis.virtualScroll.options) {
+        lenis.virtualScroll.options.wheelMultiplier = page ? PAGE_WHEEL : WHEEL_SPEED;
+      }
+      lenis.options.syncTouch = page && PAGE_TOUCH_SMOOTH && !reduceMotion;
+      lenis.options.syncTouchLerp = PAGE_TOUCH_LERP;
+      lenis.options.touchInertiaExponent = PAGE_TOUCH_INERTIA;
+    };
+    const onLenisScroll = () => {
+      tuneLenis();
+      readScroll();
+    };
 
     /* ----- drawing ----- */
     const nearestLoaded = (idx) => {

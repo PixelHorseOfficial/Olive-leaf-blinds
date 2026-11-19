@@ -23,7 +23,7 @@ html.lenis body {
   width: 100%;
   background: #14170b;
   color: #fff;
-  /* exactly one screen per scroll step (svh = stable on phones) */
+  /* STEPS screens tall; scrolling plays the frames continuously (svh = stable on phones) */
   height: calc(var(--seq-steps, 5) * 100vh);
   height: calc(var(--seq-steps, 5) * 100svh);
 }
@@ -36,6 +36,8 @@ html.lenis body {
   height: 100vh;
   height: 100svh;          /* stable on phones: ignores the collapsing address bar */
   overflow: hidden;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;  /* own GPU layer = steady while the address bar moves */
 }
 .seq-sticky.is-fixed { position: fixed; }
 .seq-sticky.is-end { top: auto; bottom: 0; }
@@ -46,6 +48,8 @@ html.lenis body {
   width: 100%;
   height: 100%;
   display: block;
+  transform: translateZ(0);       /* own GPU layer: canvas updates never repaint the page */
+  backface-visibility: hidden;
 }
 
 /* Darkens the left side + bottom so text stays readable on any frame */
@@ -148,7 +152,7 @@ html.lenis body {
 .seq-btn.ghost {
   color: #fff;
   border: 1.5px solid rgba(255, 255, 255, 0.836);
-  backdrop-filter: blur(6px);
+  background: rgba(20, 23, 11, 0.35); /* no backdrop-filter: it re-blurs the canvas every frame */
 }
 .seq-btn.ghost:hover {
   background: rgba(255, 255, 255, 0.253);
@@ -173,14 +177,15 @@ html.lenis body {
   transform: translateY(-46%);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), visibility 0s 0.6s;
+  transition: opacity 0.25s ease, transform 0.35s ease, visibility 0s 0.25s; /* old text leaves quickly... */
 }
 .seq-chapter.is-active {
   opacity: 1;
   visibility: visible;
   transform: translateY(-50%);
   pointer-events: auto;
-  transition-delay: 0.08s, 0.08s, 0s;
+  /* ...then the new text arrives, so the two never overlap */
+  transition: opacity 0.45s ease 0.22s, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.22s, visibility 0s 0s;
 }
 .seq-eyebrow {
   display: inline-block;
@@ -320,9 +325,7 @@ html.lenis body {
     padding: 0;
     border-radius: 50%;
     border: 1.5px solid rgba(255, 255, 255, 0.7);
-    background: rgba(20, 23, 11, 0.45);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(20, 23, 11, 0.6);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
@@ -351,8 +354,6 @@ html.lenis body {
     background: rgba(20, 23, 11, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
     opacity: 0;
     visibility: hidden;
     transform: translateY(-8px);
@@ -405,7 +406,7 @@ html.lenis body {
   /* Text block anchored to the bottom, sized to its content */
   .seq-copy {
     top: auto;
-    bottom: 28px;
+    bottom: 84px;             /* lifted off the bottom edge; raise/lower to taste */
     left: 20px;
     right: 20px;
     transform: none;
@@ -463,7 +464,7 @@ html.lenis body {
 @media (max-width: 560px) {
   .seq-nav-cta { display: none; }
   .seq-nav .seq-menu .seq-menu-cta { display: inline-flex; }
-  .seq-copy { bottom: 22px; min-height: 310px; }
+  .seq-copy { bottom: 76px; min-height: 310px; }
   .seq-chips span:nth-child(2) { display: none; }  /* keep it to 2 chips */
 }
 

@@ -8,16 +8,12 @@ const FRAME_DIR = '/images/olive leaf seq';
 const FRAME_EXT = 'png'; // jpg | png | webp  (files are named image00.ext … image88.ext)
 const FIRST_FRAME = 0; // number in the first file name (image00)
 const LAST_FRAME = 88; // number in the last file name (image88)
-const STEPS = 5; // exactly 5 scrolls: 1-4 move through the hero, the 5th leaves it
-const STEP_DURATION = 1.7; // seconds one scroll takes to glide to the next step (higher = slower/smoother)
-const SMOOTHING = 0.12; // frame easing per 60fps tick (0–1, higher = snappier, lower = floatier)
+const STEPS = 5; // hero is 5 screens tall: the frames play continuously over the first 4, the 5th leaves it
+const SMOOTHING = 0.2; // frame easing per 60fps tick (0–1, higher = snappier, lower = floatier)
 const SCROLL_LERP = 0.1; // Lenis smoothness for the rest of the page
 const WHEEL_SPEED = 1;
-const SWIPE_MIN = 28; // px a touch swipe must travel to count as a scroll
-const COOLDOWN_MS = 220; // ignore trackpad/touch momentum right after a step finishes
 const MOBILE_ZOOM = 1.1; // portrait screens: 1 = whole frame width visible, >1 = zoom in, <1 = zoom out
 const MOBILE_FOCUS_Y = 0.36; // portrait screens: where the frame's centre sits (0 = top, 1 = bottom)
-const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const START_IDX = FIRST_FRAME; // index of the first frame played
 const END_IDX = LAST_FRAME; // index of the last frame played
 const TOTAL = END_IDX - START_IDX + 1; // number of frames actually used
@@ -145,6 +141,7 @@ export default function Hero() {
     const reduceMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)'
     ).matches;
+    const coarse = window.matchMedia('(pointer: coarse)').matches; // phones/tablets
 
     /* ----- always start at the top; never restore an old scroll position ----- */
     if ('scrollRestoration' in window.history) {
@@ -157,7 +154,7 @@ export default function Hero() {
       lerp: SCROLL_LERP,
       smoothWheel: !reduceMotion,
       wheelMultiplier: WHEEL_SPEED,
-      touchMultiplier: 0.8,
+      syncTouch: false, // phones keep their native, momentum-based swipe scrolling
     });
     lenis.scrollTo(0, { immediate: true, force: true });
     lenis.stop();
@@ -176,88 +173,12 @@ export default function Hero() {
     };
     document.addEventListener('click', onAnchorClick);
 
-    /* ----- step scrolling: one wheel / swipe / key press = one step -----
-       Steps 0-4 sit on the hero (progress 0, .25, .5, .75, 1); step 5 is the next
-       section. Every gesture glides to the neighbouring step, so the frames play
-       smoothly and the same way on desktop, tablet and phone. */
+    /* ----- continuous scrolling -----
+       No step locking and no gesture blocking: every wheel tick, swipe or key press
+       moves the page freely (Lenis only smooths it), so the hero never pauses between
+       frames. The scroll position drives the frame directly (see readScroll). */
     let unlocked = false; // false while the frames are still loading
-    let busy = false;
-    let busyTimer = 0;
-    const unitH = () => (pinRef.current ? pinRef.current.offsetHeight : window.innerHeight);
-    const inHeroZone = (dir) => {
-      const end = unitH() * STEPS;
-      const y = window.scrollY;
-      return y < end - 4 || (dir < 0 && y <= end + 4);
-    };
-    const goStep = (dir) => {
-      if (busy) return;
-      const unit = unitH();
-      const cur = Math.round(window.scrollY / unit);
-      const next = Math.min(STEPS, Math.max(0, cur + dir));
-      if (next === cur && Math.abs(window.scrollY - next * unit) < 2) return;
-      busy = true;
-      const done = () => {
-        clearTimeout(busyTimer);
-        busyTimer = setTimeout(() => {
-          busy = false;
-        }, COOLDOWN_MS);
-      };
-      clearTimeout(busyTimer);
-      busyTimer = setTimeout(done, (STEP_DURATION + 0.5) * 1000); // safety net
-      lenis.scrollTo(next * unit, {
-        duration: reduceMotion ? 0.5 : STEP_DURATION,
-        easing: easeInOut,
-        force: true,
-        onComplete: done,
-      });
-    };
-    const swallow = (e) => {
-      if (e.cancelable) e.preventDefault();
-      e.stopImmediatePropagation();
-    };
-    const onWheel = (e) => {
-      if (!unlocked) return;
-      const dir = Math.sign(e.deltaY);
-      if (!dir || e.ctrlKey || !inHeroZone(dir)) return;
-      swallow(e);
-      if (Math.abs(e.deltaY) > 3) goStep(dir);
-    };
-    let touchY = null;
-    let touchActive = false;
-    const onTouchStart = (e) => {
-      touchY = e.touches[0].clientY;
-      touchActive = unlocked && inHeroZone(0) && inHeroZone(1);
-    };
-    const onTouchMove = (e) => {
-      if (!touchActive || touchY === null) return;
-      swallow(e);
-      const dy = touchY - e.touches[0].clientY;
-      if (Math.abs(dy) > SWIPE_MIN) {
-        goStep(Math.sign(dy));
-        touchY = e.touches[0].clientY + (dy > 0 ? SWIPE_MIN : -SWIPE_MIN) * 100; // one step per swipe
-      }
-    };
-    const onTouchEnd = () => {
-      touchY = null;
-      touchActive = false;
-    };
-    const onKeyStep = (e) => {
-      if (!unlocked || e.altKey || e.ctrlKey || e.metaKey) return;
-      const tag = (e.target && e.target.tagName) || '';
-      if (/INPUT|TEXTAREA|SELECT/.test(tag)) return;
-      let dir = 0;
-      if (e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) dir = 1;
-      else if (e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) dir = -1;
-      if (!dir || !inHeroZone(dir)) return;
-      swallow(e);
-      goStep(dir);
-    };
-    window.addEventListener('wheel', onWheel, { passive: false, capture: true });
-    window.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: true, capture: true });
-    window.addEventListener('keydown', onKeyStep, { capture: true });
+    const onLenisScroll = () => readScroll();
 
     /* ----- drawing ----- */
     const nearestLoaded = (idx) => {
@@ -267,11 +188,108 @@ export default function Hero() {
       return -1;
     };
 
-    // helper canvases for the portrait layout (blurred backdrop + feathered frame)
+    // --- portrait (phone) layout helpers ---------------------------------------
+    // 1) the backdrop is a plain colour gradient rendered ONCE (static), so it can never
+    //    flicker or show frame changes while scrolling
+    // 2) every frame is pre-rendered ONCE at its final size with the soft top/bottom
+    //    edge already applied, so each scroll tick is just two cheap drawImage calls
     const tiny = document.createElement('canvas');
     const tctx = tiny.getContext('2d');
-    const edge = document.createElement('canvas');
-    const ectx = edge.getContext('2d');
+    const backdrop = document.createElement('canvas');
+    let backdropOK = false;
+    const frameCache = new Array(FRAME_COUNT);
+
+    const isPortrait = () => canvas.width / canvas.height < 0.9;
+
+    const portraitBox = (img) => {
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      const cover = Math.max(cw / iw, ch / ih);
+      const scale = Math.min(cover, (cw / iw) * MOBILE_ZOOM);
+      const w = Math.round(iw * scale);
+      const h = Math.round(ih * scale);
+      const x = Math.round((cw - w) / 2);
+      const y = Math.round(Math.min(Math.max(ch * MOBILE_FOCUS_Y - h / 2, 0), Math.max(ch - h, 0)));
+      return { w, h, x, y };
+    };
+
+    const feathered = (i, img, w, h) => {
+      let c = frameCache[i];
+      // exact size only: the cached frame is blitted 1:1, never rescaled while scrolling
+      if (c && c.width === w && c.height === h) return c;
+      if (!c) c = frameCache[i] = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const cx = c.getContext('2d');
+      cx.imageSmoothingQuality = 'high';
+      cx.drawImage(img, 0, 0, w, h);
+      cx.globalCompositeOperation = 'destination-in';
+      const g = cx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(0.08, 'rgba(0,0,0,0.35)');
+      g.addColorStop(0.2, 'rgba(0,0,0,1)');
+      g.addColorStop(0.58, 'rgba(0,0,0,1)');
+      g.addColorStop(0.72, 'rgba(0,0,0,0.6)');
+      g.addColorStop(0.86, 'rgba(0,0,0,0.2)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      cx.fillStyle = g;
+      cx.fillRect(0, 0, w, h);
+      return c;
+    };
+
+    const prefill = (i) => {
+      const img = imagesRef.current[i];
+      if (!img || !img.naturalWidth || !isPortrait()) return;
+      const { w, h } = portraitBox(img);
+      feathered(i, img, w, h);
+    };
+
+    const ensureBackdrop = () => {
+      if (backdropOK) return true;
+      const bi = nearestLoaded(Math.round((START_IDX + END_IDX) / 2));
+      if (bi < 0) return false;
+      const img = imagesRef.current[bi];
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      if (!iw || !ih) return false;
+      const cw = canvas.width;
+      const ch = canvas.height;
+      backdrop.width = cw;
+      backdrop.height = ch;
+      const bctx = backdrop.getContext('2d');
+      // Sample the average colour of the frame's top and bottom strips (1x1 px each),
+      // then paint a plain vertical gradient. It has NO image detail, so it looks the
+      // same behind every frame and nothing moves in the soft edge area while scrolling.
+      tiny.width = 1;
+      tiny.height = 1;
+      tctx.imageSmoothingQuality = 'high';
+      const avg = (sy, sh) => {
+        tctx.clearRect(0, 0, 1, 1);
+        tctx.drawImage(img, 0, sy, iw, sh, 0, 0, 1, 1);
+        const d = tctx.getImageData(0, 0, 1, 1).data;
+        return [d[0], d[1], d[2]];
+      };
+      let top;
+      let bottom;
+      try {
+        top = avg(0, ih * 0.2);
+        bottom = avg(ih * 0.8, ih * 0.2);
+      } catch (e) {
+        top = [40, 44, 22];
+        bottom = [30, 34, 16];
+      }
+      const mix = (c, k) => `rgb(${Math.round(c[0] * k + 20 * (1 - k))}, ${Math.round(c[1] * k + 23 * (1 - k))}, ${Math.round(c[2] * k + 11 * (1 - k))})`;
+      const g = bctx.createLinearGradient(0, 0, 0, ch);
+      g.addColorStop(0, mix(top, 0.55));
+      g.addColorStop(0.45, mix(bottom, 0.4));
+      g.addColorStop(1, 'rgb(20, 23, 11)'); // matches .seq background + text shade
+      bctx.fillStyle = g;
+      bctx.fillRect(0, 0, cw, ch);
+      backdropOK = true;
+      return true;
+    };
 
     const paintFrame = (i, alpha) => {
       const useIdx = nearestLoaded(i);
@@ -282,64 +300,25 @@ export default function Hero() {
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
       if (!iw || !ih) return false;
-      const cover = Math.max(cw / iw, ch / ih);
-      let scale = cover;
-      let x;
-      let y;
-      if (cw / ch < 0.9) {
-        // Portrait (phones / tablets): fit the whole frame width so the logo is fully
-        // visible, then FILL the leftover space above/below with a blurred, enlarged
-        // copy of the same frame (no empty bands), and feather the frame's top/bottom
-        // edges so it melts into that backdrop.
-        scale = Math.min(cover, (cw / iw) * MOBILE_ZOOM);
-        const w = Math.round(iw * scale);
-        const h = Math.round(ih * scale);
-        x = Math.round((cw - w) / 2);
-        y = Math.round(Math.min(Math.max(ch * MOBILE_FOCUS_Y - h / 2, 0), Math.max(ch - h, 0)));
 
-        if (alpha >= 1) {
-          // blurred backdrop: shrink the frame to a tiny canvas, stretch it back up (cover)
-          const tw = 36;
-          const th = Math.max(8, Math.round((tw * ch) / cw));
-          if (tiny.width !== tw || tiny.height !== th) {
-            tiny.width = tw;
-            tiny.height = th;
-          }
-          const ts = Math.max(tw / iw, th / ih);
-          tctx.imageSmoothingQuality = 'high';
-          tctx.drawImage(img, (tw - iw * ts) / 2, (th - ih * ts) / 2, iw * ts, ih * ts);
-          ctx.globalAlpha = 1;
-          ctx.drawImage(tiny, 0, 0, cw, ch);
-          ctx.fillStyle = 'rgba(20, 23, 11, 0.38)'; // keep it calm behind the text
+      if (isPortrait()) {
+        const { w, h, x, y } = portraitBox(img);
+        ctx.globalAlpha = 1;
+        if (ensureBackdrop()) {
+          ctx.drawImage(backdrop, 0, 0);
+        } else {
+          ctx.fillStyle = '#14170b';
           ctx.fillRect(0, 0, cw, ch);
         }
-
-        // frame with soft top/bottom edges
-        if (edge.width !== w || edge.height !== h) {
-          edge.width = w;
-          edge.height = h;
-        }
-        ectx.globalCompositeOperation = 'source-over';
-        ectx.clearRect(0, 0, w, h);
-        ectx.drawImage(img, 0, 0, w, h);
-        ectx.globalCompositeOperation = 'destination-in';
-        const g = ectx.createLinearGradient(0, 0, 0, h);
-        g.addColorStop(0, 'rgba(0,0,0,0)');
-        g.addColorStop(0.16, 'rgba(0,0,0,1)');
-        g.addColorStop(0.84, 'rgba(0,0,0,1)');
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        ectx.fillStyle = g;
-        ectx.fillRect(0, 0, w, h);
-        ectx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = alpha;
-        ctx.drawImage(edge, x, y);
-        ctx.globalAlpha = 1;
+        ctx.drawImage(feathered(useIdx, img, w, h), x, y); // 1:1, no scaling
         return true;
       }
-      x = (cw - iw * scale) / 2;
-      y = (ch - ih * scale) / 2;
+
+      const scale = Math.max(cw / iw, ch / ih);
       const w = iw * scale;
       const h = ih * scale;
+      const x = (cw - w) / 2;
+      const y = (ch - h) / 2;
       ctx.globalAlpha = alpha;
       ctx.drawImage(img, Math.round(x), Math.round(y), Math.round(w), Math.round(h));
       ctx.globalAlpha = 1;
@@ -351,8 +330,23 @@ export default function Hero() {
     // While moving, neighbouring frames are cross-faded for fluid playback.
     // Once the motion settles (scroll stopped / nearly stopped) we draw ONE crisp
     // frame instead — blending two frames at rest is what made the image look blurry.
+    let shown = -1; // portrait: the frame index currently on screen
     const draw = (pos, settled = false) => {
       const p = Math.min(END_IDX, Math.max(START_IDX, pos));
+      if (isPortrait()) {
+        // PHONE: never blend two frames (blending the soft edges of two different frames
+        // is what looked like "shattering"). Show ONE whole frame; only switch once the
+        // position is clearly past the half-way point, so touch-scroll jitter can't make
+        // it flip back and forth between two frames.
+        let idx = Math.round(p);
+        if (shown >= 0 && Math.abs(p - shown) < 0.65) idx = shown;
+        if (idx !== shown) {
+          paintFrame(idx, 1);
+          shown = idx;
+        }
+        lastDrawn = pos;
+        return;
+      }
       if (settled) {
         paintFrame(Math.round(p), 1);
         lastDrawn = pos;
@@ -365,41 +359,87 @@ export default function Hero() {
       lastDrawn = pos;
     };
 
+    // After a size change every cached frame is stale. Rebuild them a few at a time in
+    // the background instead of lazily in the middle of a scroll (that caused hitches).
+    let rebuildTimer = 0;
+    const rebuildCache = () => {
+      clearTimeout(rebuildTimer);
+      if (!isPortrait()) return;
+      let i = START_IDX;
+      const step = () => {
+        if (cancelled) return;
+        for (let n = 0; n < 3 && i <= END_IDX; n++, i++) prefill(i);
+        if (i <= END_IDX) rebuildTimer = setTimeout(step, 16);
+      };
+      step();
+    };
+
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(canvas.clientWidth * dpr);
-      canvas.height = Math.round(canvas.clientHeight * dpr);
+      const dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2);
+      const w = Math.round(canvas.clientWidth * dpr);
+      const h = Math.round(canvas.clientHeight * dpr);
+      measure();
+      // Phone browsers fire "resize" whenever the address bar slides. Re-assigning
+      // canvas.width clears it (a visible flash/shake), so do nothing if size is unchanged.
+      if (w === canvas.width && h === canvas.height) return;
+      canvas.width = w;
+      canvas.height = h;
+      // changing the size resets the context, so set the quality again
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      backdropOK = false;
       lastDrawn = -1;
+      shown = -1;
       draw(current);
+      rebuildCache();
     };
 
     /* ----- scroll → progress ----- */
+    // Layout is measured only on resize (never inside the scroll handler),
+    // so scrolling does not force the browser to recalculate layout.
+    let pinH = window.innerHeight;
+    let trackTop = 0;
+    let trackH = 0;
+    let pinMode = '';
+    const measure = () => {
+      const track = trackRef.current;
+      const pin = pinRef.current;
+      if (!track) return;
+      pinH = pin ? pin.offsetHeight : window.innerHeight; // one scroll = one screen
+      trackTop = track.getBoundingClientRect().top + window.scrollY;
+      trackH = track.offsetHeight;
+    };
     const readScroll = () => {
       const track = trackRef.current;
       if (!track) return;
-      const rect = track.getBoundingClientRect();
+      if (!trackH) measure();
       const pin = pinRef.current;
-      const unit = pin ? pin.offsetHeight : window.innerHeight; // one scroll = one screen
+      const top = trackTop - window.scrollY; // hero top relative to the viewport
+      const bottom = top + trackH;
       // The hero plays while pinned: STEPS screens tall, minus the one on screen.
-      const total = (STEPS - 1) * unit;
+      const total = (STEPS - 1) * pinH;
       /* Pin the hero layer with JS instead of CSS sticky: sticky silently stops
          working when html/body have overflow-x:hidden, which made the hero scroll
          away. top = before the hero, fixed = while it plays, end = after it. */
       if (pin) {
-        const mode = rect.top > 0 ? 'top' : rect.bottom < unit ? 'end' : 'fixed';
-        pin.classList.toggle('is-fixed', mode === 'fixed');
-        pin.classList.toggle('is-end', mode === 'end');
+        const mode = top > 0 ? 'top' : bottom < pinH ? 'end' : 'fixed';
+        if (mode !== pinMode) {
+          pinMode = mode;
+          pin.classList.toggle('is-fixed', mode === 'fixed');
+          pin.classList.toggle('is-end', mode === 'end');
+        }
       }
-      let p = total > 0 ? -rect.top / total : 0;
+      let p = total > 0 ? -top / total : 0;
       if (!Number.isFinite(p)) p = 0;
       // Stay on frame 1 until the visitor actually scrolls (wheel / touch / keys / scrollbar)
+      if (!armed && unlocked && window.scrollY > 2) armed = true;
       progress = armed ? Math.min(1, Math.max(0, p)) : 0;
       target = START_IDX + progress * (END_IDX - START_IDX);
 
       if (debugRef.current) {
         debugRef.current.textContent =
-          `scrollY ${Math.round(window.scrollY)} | track ${track.offsetHeight}px | ` +
-          `viewport ${window.innerHeight}px | rect.top ${Math.round(rect.top)} | ` +
+          `scrollY ${Math.round(window.scrollY)} | track ${trackH}px | ` +
+          `viewport ${window.innerHeight}px | top ${Math.round(top)} | ` +
           `progress ${p.toFixed(3)} | armed ${armed}`;
       }
 
@@ -431,34 +471,41 @@ export default function Hero() {
       }
       const gap = Math.abs(target - current);
       if (gap < 0.005) current = target;
-      // settled = almost no motion left -> snap to a single sharp frame
-      const settled = gap < 0.35;
+      // settled = motion is over -> a single sharp frame. Kept tight so slow, continuous
+      // scrolling never flips between blended and single-frame drawing (that read as a stutter)
+      const settled = gap < 0.01;
       if (current !== lastDrawn || (settled && !wasSettled)) draw(current, settled);
       wasSettled = settled;
       raf = requestAnimationFrame(tick);
     };
 
     /* ----- preload frames ----- */
+    const unlockNow = () => {
+      if (unlocked) return;
+      setReady(true);
+      unlocked = true;
+      // reset to the very top, then unlock scrolling
+      window.scrollTo(0, 0);
+      lenis.scrollTo(0, { immediate: true, force: true });
+      target = START_IDX;
+      current = START_IDX;
+      lastDrawn = -1;
+      draw(START_IDX);
+      measure();
+      readScroll();
+      lenis.start();
+    };
     const onFrameLoaded = (i) => {
       loadedRef.current[i] = true;
       loadedCount++;
       if (i === START_IDX) draw(START_IDX);
+      shown = -1; // repaint if the frame that just arrived is the one on screen
+      lastDrawn = -1;
       setLoadedPct(Math.round((loadedCount / TOTAL) * 100));
-      if (loadedCount === TOTAL || loadedCount >= 6) {
-        setReady(true);
-        unlocked = true;
-        if (lenis.isStopped) {
-          // reset to the very top, then unlock scrolling
-          window.scrollTo(0, 0);
-          lenis.scrollTo(0, { immediate: true, force: true });
-          target = START_IDX;
-          current = START_IDX;
-          lastDrawn = -1;
-          draw(START_IDX);
-          readScroll();
-          lenis.start();
-        }
-      }
+      // phones wait for every frame, so scrolling never lands on a frame that isn't ready
+      // (that fallback to a far-away frame looked like jumping / shattering)
+      const needed = coarse || window.innerWidth <= 860 ? TOTAL : 6;
+      if (loadedCount === TOTAL || loadedCount >= needed) unlockNow();
     };
 
     const order = [START_IDX];
@@ -479,8 +526,17 @@ export default function Hero() {
       const img = new Image();
       img.decoding = 'async';
       img.onload = () => {
-        if (!cancelled) onFrameLoaded(i);
-        loadNext();
+        // decode off the main thread, then pre-render the frame, so scrolling never
+        // has to decode a big image
+        const finish = () => {
+          if (!cancelled) {
+            prefill(i);
+            onFrameLoaded(i);
+          }
+          loadNext();
+        };
+        if (img.decode) img.decode().then(finish, finish);
+        else finish();
       };
       img.onerror = () => {
         console.warn('Missing frame:', frameSrc(i));
@@ -494,6 +550,7 @@ export default function Hero() {
     const probe = (n) => {
       if (cancelled) return;
       if (n >= exts.length) {
+        lenis.start(); // never leave the page scroll-locked if the frames are missing
         setError(
           `Could not find ${FRAME_DIR}/image${String(START_IDX).padStart(2, '0')}.(jpg|jpeg|png|webp). ` +
             'Check that the folder is public/images/olive leaf seq and the files are named image00, image01 …'
@@ -513,15 +570,23 @@ export default function Hero() {
       frameExt = prevExt;
     };
     probe(0);
+    // safety net: on a slow connection don't keep the page locked behind the loader
+    const unlockTimer = setTimeout(() => {
+      if (!unlocked && loadedCount > 0) unlockNow();
+    }, coarse || window.innerWidth <= 860 ? 25000 : 10000);
 
     resize();
     readScroll();
     raf = requestAnimationFrame(tick);
 
-    lenis.on('scroll', readScroll);
+    lenis.on('scroll', onLenisScroll);
+    let resizeRaf = 0;
     const onResize = () => {
-      resize();
-      readScroll();
+      cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        resize();
+        readScroll();
+      });
     };
     window.addEventListener('resize', onResize);
 
@@ -529,13 +594,9 @@ export default function Hero() {
       cancelled = true;
       cancelAnimationFrame(raf);
       document.removeEventListener('click', onAnchorClick);
-      clearTimeout(busyTimer);
-      window.removeEventListener('wheel', onWheel, { capture: true });
-      window.removeEventListener('touchstart', onTouchStart, { capture: true });
-      window.removeEventListener('touchmove', onTouchMove, { capture: true });
-      window.removeEventListener('touchend', onTouchEnd, { capture: true });
-      window.removeEventListener('touchcancel', onTouchEnd, { capture: true });
-      window.removeEventListener('keydown', onKeyStep, { capture: true });
+      clearTimeout(unlockTimer);
+      clearTimeout(rebuildTimer);
+      cancelAnimationFrame(resizeRaf);
       armEvents.forEach((ev) => window.removeEventListener(ev, arm));
       lenis.destroy();
       window.removeEventListener('resize', onResize);

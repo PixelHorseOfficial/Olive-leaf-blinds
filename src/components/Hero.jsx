@@ -8,10 +8,16 @@ const FRAME_DIR = '/images/olive leaf seq';
 const FRAME_EXT = 'png'; // jpg | png | webp  (files are named image00.ext … image88.ext)
 const FIRST_FRAME = 0; // number in the first file name (image00)
 const LAST_FRAME = 88; // number in the last file name (image88)
-const SCROLL_LENGTH_VH = 700; // total scroll distance: ~5-6 scrolls (bigger = more scrolls)
-const SMOOTHING = 0.22; // frame easing per 60fps tick (0–1, higher = snappier, lower = floatier)
-const SCROLL_LERP = 0.12; // Lenis smoothness (lower = floatier)
-const WHEEL_SPEED = 1; // how far one wheel notch scrolls (higher = faster)
+const STEPS = 5; // exactly 5 scrolls: 1-4 move through the hero, the 5th leaves it
+const STEP_DURATION = 1.7; // seconds one scroll takes to glide to the next step (higher = slower/smoother)
+const SMOOTHING = 0.12; // frame easing per 60fps tick (0–1, higher = snappier, lower = floatier)
+const SCROLL_LERP = 0.1; // Lenis smoothness for the rest of the page
+const WHEEL_SPEED = 1;
+const SWIPE_MIN = 28; // px a touch swipe must travel to count as a scroll
+const COOLDOWN_MS = 220; // ignore trackpad/touch momentum right after a step finishes
+const MOBILE_ZOOM = 1.1; // portrait screens: 1 = whole frame width visible, >1 = zoom in, <1 = zoom out
+const MOBILE_FOCUS_Y = 0.36; // portrait screens: where the frame's centre sits (0 = top, 1 = bottom)
+const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const START_IDX = FIRST_FRAME; // index of the first frame played
 const END_IDX = LAST_FRAME; // index of the last frame played
 const TOTAL = END_IDX - START_IDX + 1; // number of frames actually used
@@ -31,11 +37,9 @@ const NAV_LINKS = [
   { href: '#reach', label: 'Coverage' },
 ];
 
-/* Text chapters shown over the sequence, by scroll progress (0–1) */
+/* Text chapters shown over the sequence: chapter n is shown at scroll step n */
 const CHAPTERS = [
   {
-    from: 0,
-    to: 0.22,
     eyebrow: 'Made to fit · Installed at home',
     title: (
       <>
@@ -47,8 +51,6 @@ const CHAPTERS = [
     text: 'Custom window blinds and drapery, crafted for the way you live and fitted in your home, across the USA.',
   },
   {
-    from: 0.28,
-    to: 0.5,
     eyebrow: 'The collection',
     title: (
       <>
@@ -58,8 +60,6 @@ const CHAPTERS = [
     text: 'Roller, Roman, wooden and sheer — in fabrics and finishes chosen to suit your space.',
   },
   {
-    from: 0.56,
-    to: 0.78,
     eyebrow: 'Free in-home measure',
     title: (
       <>
@@ -69,8 +69,6 @@ const CHAPTERS = [
     text: 'Every blind is made to order from precise measurements taken in your home.',
   },
   {
-    from: 0.84,
-    to: 1.01,
     eyebrow: 'Expert installation',
     title: (
       <>
@@ -178,6 +176,89 @@ export default function Hero() {
     };
     document.addEventListener('click', onAnchorClick);
 
+    /* ----- step scrolling: one wheel / swipe / key press = one step -----
+       Steps 0-4 sit on the hero (progress 0, .25, .5, .75, 1); step 5 is the next
+       section. Every gesture glides to the neighbouring step, so the frames play
+       smoothly and the same way on desktop, tablet and phone. */
+    let unlocked = false; // false while the frames are still loading
+    let busy = false;
+    let busyTimer = 0;
+    const unitH = () => (pinRef.current ? pinRef.current.offsetHeight : window.innerHeight);
+    const inHeroZone = (dir) => {
+      const end = unitH() * STEPS;
+      const y = window.scrollY;
+      return y < end - 4 || (dir < 0 && y <= end + 4);
+    };
+    const goStep = (dir) => {
+      if (busy) return;
+      const unit = unitH();
+      const cur = Math.round(window.scrollY / unit);
+      const next = Math.min(STEPS, Math.max(0, cur + dir));
+      if (next === cur && Math.abs(window.scrollY - next * unit) < 2) return;
+      busy = true;
+      const done = () => {
+        clearTimeout(busyTimer);
+        busyTimer = setTimeout(() => {
+          busy = false;
+        }, COOLDOWN_MS);
+      };
+      clearTimeout(busyTimer);
+      busyTimer = setTimeout(done, (STEP_DURATION + 0.5) * 1000); // safety net
+      lenis.scrollTo(next * unit, {
+        duration: reduceMotion ? 0.5 : STEP_DURATION,
+        easing: easeInOut,
+        force: true,
+        onComplete: done,
+      });
+    };
+    const swallow = (e) => {
+      if (e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+    };
+    const onWheel = (e) => {
+      if (!unlocked) return;
+      const dir = Math.sign(e.deltaY);
+      if (!dir || e.ctrlKey || !inHeroZone(dir)) return;
+      swallow(e);
+      if (Math.abs(e.deltaY) > 3) goStep(dir);
+    };
+    let touchY = null;
+    let touchActive = false;
+    const onTouchStart = (e) => {
+      touchY = e.touches[0].clientY;
+      touchActive = unlocked && inHeroZone(0) && inHeroZone(1);
+    };
+    const onTouchMove = (e) => {
+      if (!touchActive || touchY === null) return;
+      swallow(e);
+      const dy = touchY - e.touches[0].clientY;
+      if (Math.abs(dy) > SWIPE_MIN) {
+        goStep(Math.sign(dy));
+        touchY = e.touches[0].clientY + (dy > 0 ? SWIPE_MIN : -SWIPE_MIN) * 100; // one step per swipe
+      }
+    };
+    const onTouchEnd = () => {
+      touchY = null;
+      touchActive = false;
+    };
+    const onKeyStep = (e) => {
+      if (!unlocked || e.altKey || e.ctrlKey || e.metaKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag)) return;
+      let dir = 0;
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) dir = 1;
+      else if (e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) dir = -1;
+      if (!dir || !inHeroZone(dir)) return;
+      swallow(e);
+      goStep(dir);
+    };
+    window.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true, capture: true });
+    window.addEventListener('keydown', onKeyStep, { capture: true });
+
     /* ----- drawing ----- */
     const nearestLoaded = (idx) => {
       for (let i = idx; i >= 0; i--) if (loadedRef.current[i]) return i;
@@ -185,6 +266,12 @@ export default function Hero() {
         if (loadedRef.current[i]) return i;
       return -1;
     };
+
+    // helper canvases for the portrait layout (blurred backdrop + feathered frame)
+    const tiny = document.createElement('canvas');
+    const tctx = tiny.getContext('2d');
+    const edge = document.createElement('canvas');
+    const ectx = edge.getContext('2d');
 
     const paintFrame = (i, alpha) => {
       const useIdx = nearestLoaded(i);
@@ -195,11 +282,66 @@ export default function Hero() {
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
       if (!iw || !ih) return false;
-      const scale = Math.max(cw / iw, ch / ih); // "cover"
+      const cover = Math.max(cw / iw, ch / ih);
+      let scale = cover;
+      let x;
+      let y;
+      if (cw / ch < 0.9) {
+        // Portrait (phones / tablets): fit the whole frame width so the logo is fully
+        // visible, then FILL the leftover space above/below with a blurred, enlarged
+        // copy of the same frame (no empty bands), and feather the frame's top/bottom
+        // edges so it melts into that backdrop.
+        scale = Math.min(cover, (cw / iw) * MOBILE_ZOOM);
+        const w = Math.round(iw * scale);
+        const h = Math.round(ih * scale);
+        x = Math.round((cw - w) / 2);
+        y = Math.round(Math.min(Math.max(ch * MOBILE_FOCUS_Y - h / 2, 0), Math.max(ch - h, 0)));
+
+        if (alpha >= 1) {
+          // blurred backdrop: shrink the frame to a tiny canvas, stretch it back up (cover)
+          const tw = 36;
+          const th = Math.max(8, Math.round((tw * ch) / cw));
+          if (tiny.width !== tw || tiny.height !== th) {
+            tiny.width = tw;
+            tiny.height = th;
+          }
+          const ts = Math.max(tw / iw, th / ih);
+          tctx.imageSmoothingQuality = 'high';
+          tctx.drawImage(img, (tw - iw * ts) / 2, (th - ih * ts) / 2, iw * ts, ih * ts);
+          ctx.globalAlpha = 1;
+          ctx.drawImage(tiny, 0, 0, cw, ch);
+          ctx.fillStyle = 'rgba(20, 23, 11, 0.38)'; // keep it calm behind the text
+          ctx.fillRect(0, 0, cw, ch);
+        }
+
+        // frame with soft top/bottom edges
+        if (edge.width !== w || edge.height !== h) {
+          edge.width = w;
+          edge.height = h;
+        }
+        ectx.globalCompositeOperation = 'source-over';
+        ectx.clearRect(0, 0, w, h);
+        ectx.drawImage(img, 0, 0, w, h);
+        ectx.globalCompositeOperation = 'destination-in';
+        const g = ectx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(0.16, 'rgba(0,0,0,1)');
+        g.addColorStop(0.84, 'rgba(0,0,0,1)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ectx.fillStyle = g;
+        ectx.fillRect(0, 0, w, h);
+        ectx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(edge, x, y);
+        ctx.globalAlpha = 1;
+        return true;
+      }
+      x = (cw - iw * scale) / 2;
+      y = (ch - ih * scale) / 2;
       const w = iw * scale;
       const h = ih * scale;
       ctx.globalAlpha = alpha;
-      ctx.drawImage(img, Math.round((cw - w) / 2), Math.round((ch - h) / 2), Math.round(w), Math.round(h));
+      ctx.drawImage(img, Math.round(x), Math.round(y), Math.round(w), Math.round(h));
       ctx.globalAlpha = 1;
       return true;
     };
@@ -236,15 +378,15 @@ export default function Hero() {
       const track = trackRef.current;
       if (!track) return;
       const rect = track.getBoundingClientRect();
-      // Sequence length is fixed by config (the Collection section may add a tail
-      // to the hero's height so it stays pinned while the collection covers it).
-      const total = (SCROLL_LENGTH_VH / 100) * window.innerHeight - window.innerHeight;
+      const pin = pinRef.current;
+      const unit = pin ? pin.offsetHeight : window.innerHeight; // one scroll = one screen
+      // The hero plays while pinned: STEPS screens tall, minus the one on screen.
+      const total = (STEPS - 1) * unit;
       /* Pin the hero layer with JS instead of CSS sticky: sticky silently stops
          working when html/body have overflow-x:hidden, which made the hero scroll
          away. top = before the hero, fixed = while it plays, end = after it. */
-      const pin = pinRef.current;
       if (pin) {
-        const mode = rect.top > 0 ? 'top' : rect.bottom < window.innerHeight ? 'end' : 'fixed';
+        const mode = rect.top > 0 ? 'top' : rect.bottom < unit ? 'end' : 'fixed';
         pin.classList.toggle('is-fixed', mode === 'fixed');
         pin.classList.toggle('is-end', mode === 'end');
       }
@@ -265,8 +407,9 @@ export default function Hero() {
         barRef.current.style.transform = `scaleX(${progress})`;
       }
 
-      let c = CHAPTERS.findIndex((ch) => progress >= ch.from && progress < ch.to);
-      if (c !== lastChapter && c !== -1) {
+      // chapter n belongs to scroll step n (the last chapter also covers the final step)
+      const c = Math.min(CHAPTERS.length - 1, Math.round(progress * (STEPS - 1)));
+      if (c !== lastChapter) {
         lastChapter = c;
         setChapter(c);
       }
@@ -303,6 +446,7 @@ export default function Hero() {
       setLoadedPct(Math.round((loadedCount / TOTAL) * 100));
       if (loadedCount === TOTAL || loadedCount >= 6) {
         setReady(true);
+        unlocked = true;
         if (lenis.isStopped) {
           // reset to the very top, then unlock scrolling
           window.scrollTo(0, 0);
@@ -385,6 +529,13 @@ export default function Hero() {
       cancelled = true;
       cancelAnimationFrame(raf);
       document.removeEventListener('click', onAnchorClick);
+      clearTimeout(busyTimer);
+      window.removeEventListener('wheel', onWheel, { capture: true });
+      window.removeEventListener('touchstart', onTouchStart, { capture: true });
+      window.removeEventListener('touchmove', onTouchMove, { capture: true });
+      window.removeEventListener('touchend', onTouchEnd, { capture: true });
+      window.removeEventListener('touchcancel', onTouchEnd, { capture: true });
+      window.removeEventListener('keydown', onKeyStep, { capture: true });
       armEvents.forEach((ev) => window.removeEventListener(ev, arm));
       lenis.destroy();
       window.removeEventListener('resize', onResize);
@@ -396,7 +547,7 @@ export default function Hero() {
       className="seq"
       id="home"
       ref={trackRef}
-      style={{ height: `${SCROLL_LENGTH_VH}vh` }}
+      style={{ '--seq-steps': STEPS }}
     >
       <div className="seq-sticky" ref={pinRef}>
         <canvas ref={canvasRef} className="seq-canvas" aria-hidden="true" />

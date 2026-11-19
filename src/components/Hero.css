@@ -23,6 +23,9 @@ html.lenis body {
   width: 100%;
   background: #14170b;
   color: #fff;
+  /* exactly one screen per scroll step (svh = stable on phones) */
+  height: calc(var(--seq-steps, 5) * 100vh);
+  height: calc(var(--seq-steps, 5) * 100svh);
 }
 
 .seq-sticky {
@@ -395,7 +398,7 @@ html.lenis body {
   /* Strong dark gradient behind the text area + soft top for the nav */
   .seq-shade {
     background:
-      linear-gradient(0deg, rgba(14, 18, 6, 0.92) 0%, rgba(14, 18, 6, 0.8) 38%, rgba(14, 18, 6, 0.35) 68%, rgba(14, 18, 6, 0) 85%),
+      linear-gradient(0deg, rgba(14, 18, 6, 0.92) 0%, rgba(14, 18, 6, 0.8) 30%, rgba(14, 18, 6, 0.3) 46%, rgba(14, 18, 6, 0) 60%),
       linear-gradient(180deg, rgba(14, 18, 6, 0.6) 0%, rgba(14, 18, 6, 0) 20%);
   }
 
